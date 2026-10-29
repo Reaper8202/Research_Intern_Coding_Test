@@ -48,7 +48,7 @@ make dataset    # step 1: data/raw -> data/processed, reports/dataset
 make baseline   # step 2: models/baseline, reports/baseline
 ```
 
-Step 1 takes about 20 seconds and step 2 about 3 minutes on a laptop. `make clean` removes
+Step 1 takes about 20 seconds and step 2 about 2 minutes on a laptop. `make clean` removes
 everything that these commands generate, except the committed reports.
 
 ## How leakage is prevented
@@ -67,10 +67,14 @@ everything that these commands generate, except the committed reports.
 
 | Model | Macro AUROC | mAP |
 |---|---|---|
-| Age and sex only | 0.698 [0.675, 0.722] | 0.113 [0.102, 0.118] |
-| Code counts + age and sex | 0.756 [0.735, 0.775] | 0.217 [0.185, 0.225] |
+| Age-sex incidence table | 0.692 [0.667, 0.716] | 0.111 [0.097, 0.116] |
+| Age-sex incidence table, at-risk patients only | 0.727 [0.703, 0.749] | 0.141 [0.120, 0.148] |
+| Logistic regression, age and sex | 0.698 [0.675, 0.722] | 0.113 [0.102, 0.118] |
+| Logistic regression, code counts + age and sex | 0.756 [0.735, 0.775] | 0.217 [0.185, 0.225] |
 
-95% BCa bootstrap intervals. Details and a leakage review: `docs/baseline_results.md`.
+95% BCa bootstrap intervals. The code-count model beats the at-risk incidence table by +0.029
+macro AUROC [+0.003, +0.054] (paired bootstrap). Details, per-condition analysis, and a leakage
+review: `docs/baseline_results.md`.
 
 ## Package modules
 
@@ -86,7 +90,8 @@ everything that these commands generate, except the committed reports.
 | `parity.py` | train/val versus test comparison statistics |
 | `build_dataset.py` | step 1 command |
 | `features.py` | bag-of-codes features |
+| `incidence.py` | sex- and age-stratified incidence baseline |
 | `baseline.py` | multi-label logistic regression |
-| `metrics.py` | AUROC, AP, BCa bootstrap intervals |
+| `metrics.py` | AUROC, AP, BCa bootstrap intervals, paired model comparison |
 | `train_baseline.py` | step 2 command |
 | `logging_utils.py` | console and file logging for the commands |

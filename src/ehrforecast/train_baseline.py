@@ -1,18 +1,25 @@
-"""Step 2: logistic-regression baselines on the leak-free dataset from step 1.
+"""Step 2: reference baselines on the leak-free dataset from step 1.
 
-Protocol:
+Models:
 
-1. Pick the regularisation strength ``C`` by k-fold cross-validation on the training split only.
-   The feature vocabulary is refitted inside every fold.
-2. Fit the final model on the whole training split with the chosen ``C``.
+* ``incidence_age_sex``: observed five-year incidence in the patient's sex and age band.
+* ``incidence_age_sex_at_risk``: the same, counting only patients without the condition, and
+  probability 0 for patients who already have it.
+* ``logreg_demographics``: logistic regression on age, age bands, and sex.
+* ``logreg_codes``: logistic regression on bag-of-codes counts plus age and sex.
+
+Protocol, identical for every model:
+
+1. Choose hyperparameters by k-fold cross-validation on the training split only. All models use
+   the same folds. Feature vocabularies and incidence tables are refitted inside every fold.
+2. Fit the final model on the whole training split with the chosen hyperparameters.
 3. Score the validation split once. Validation data never changes a model choice, so its
    metrics are an unbiased held-out estimate. The test labels are hidden, so validation is the
    only held-out evaluation available to us.
+4. Compare ``logreg_codes`` with every other model on the same val patients (paired BCa
+   bootstrap of the difference).
 
-Two feature sets are compared: ``demographics`` (age and sex only) and ``codes`` (bag-of-codes
-plus age and sex). The gap between them shows how much the clinical history adds.
-
-Outputs: the fitted ``codes`` model goes to ``--models``; metrics, per-target tables,
+Outputs: the fitted ``logreg_codes`` model goes to ``--models``; metrics, per-target tables,
 cross-validation results, top features, and val predictions go to ``--reports``.
 
 Usage::
@@ -24,10 +31,10 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import logging
-import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -39,60 +46,175 @@ from sklearn.model_selection import KFold
 from ehrforecast.baseline import MultiLabelLogistic
 from ehrforecast.config import RANDOM_SEED
 from ehrforecast.features import BagOfCodes, FeatureConfig
+from ehrforecast.incidence import StratifiedIncidence
 from ehrforecast.logging_utils import setup_logging
-from ehrforecast.metrics import bootstrap_summary, per_label_metrics, summarize
+from ehrforecast.metrics import (
+    bootstrap_summary,
+    paired_bootstrap_difference,
+    per_label_metrics,
+    summarize,
+)
 
 log = logging.getLogger("ehrforecast.train_baseline")
 
-FEATURE_SETS = {
-    "demographics": FeatureConfig(include_codes=False),
-    "codes": FeatureConfig(),
+INCIDENCE_MODELS = {
+    "incidence_age_sex": False,
+    "incidence_age_sex_at_risk": True,
 }
+LOGREG_MODELS = {
+    "logreg_demographics": FeatureConfig(include_codes=False),
+    "logreg_codes": FeatureConfig(),
+}
+REFERENCE_MODEL = "logreg_codes"
+
 DEFAULT_C_GRID = (1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 1.0)
+DEFAULT_BAND_GRID = (2.5, 5.0, 10.0, 20.0)
+DEFAULT_PRIOR_STRENGTH_GRID = (1.0, 10.0, 100.0)
 EVENT_COLUMNS = ["patient_id", "time", "source", "kind", "code"]
 
 
-def cross_validate_c(
-    events: pd.DataFrame,
-    train: pd.DataFrame,
-    y_train: np.ndarray,
-    codes: list[str],
-    feature_config: FeatureConfig,
-    c_grid: tuple[float, ...],
-    n_folds: int,
-    seed: int,
-    n_jobs: int,
-) -> pd.DataFrame:
-    """Return one row per (fold, C) with macro AUROC and mAP on the held-out fold."""
+@dataclass
+class Data:
+    """Everything the baselines need, already split into train and val."""
+
+    events: pd.DataFrame
+    train: pd.DataFrame
+    val: pd.DataFrame
+    y_train: np.ndarray
+    y_val: np.ndarray
+    prior_train: np.ndarray
+    prior_val: np.ndarray
+    codes: list[str]
+
+
+@dataclass
+class ModelResult:
+    cv: pd.DataFrame
+    params: dict[str, float]
+    p_val: np.ndarray
+    extras: dict[str, Any]
+
+
+def load_data(dataset_dir: Path) -> tuple[Data, pd.DataFrame, pd.DataFrame]:
+    """Load step 1 outputs; also return the target table and the code descriptions."""
+    cohort = pd.read_parquet(dataset_dir / "cohort.parquet")
+    events = pd.read_parquet(dataset_dir / "events.parquet", columns=EVENT_COLUMNS)
+    labels = pd.read_parquet(dataset_dir / "labels.parquet")
+    prior = pd.read_parquet(dataset_dir / "prior_conditions.parquet")
+    descriptions = pd.read_parquet(dataset_dir / "code_descriptions.parquet")
+    targets = pd.read_csv(dataset_dir / "targets.csv", dtype=str)
+    codes = targets["CODE"].tolist()
+    if list(labels.columns) != codes or list(prior.columns) != codes:
+        raise ValueError("label columns do not match targets.csv")
+
+    train = cohort[cohort["split"] == "train"]
+    val = cohort[cohort["split"] == "val"]
+    if set(train.index) & set(val.index):
+        raise AssertionError("train and val overlap")
+    data = Data(
+        events=events,
+        train=train,
+        val=val,
+        y_train=labels.loc[train.index].to_numpy(),
+        y_val=labels.loc[val.index].to_numpy(),
+        prior_train=prior.loc[train.index].to_numpy(),
+        prior_val=prior.loc[val.index].to_numpy(),
+        codes=codes,
+    )
+    return data, targets, descriptions
+
+
+def select_best(cv: pd.DataFrame, grids: dict[str, tuple[float, ...]]) -> dict[str, float]:
+    """Return the hyperparameters with the highest mean cross-validated macro AUROC."""
+    names = list(grids)
+    mean_auroc = cv.groupby(names)["macro_auroc"].mean()
+    best_key = mean_auroc.index[int(np.argmax(mean_auroc.to_numpy()))]
+    values = best_key if isinstance(best_key, tuple) else (best_key,)
+    best = {name: float(v) for name, v in zip(names, values, strict=True)}
+    for name, value in best.items():
+        grid = grids[name]
+        if len(grid) > 1 and value in (min(grid), max(grid)):
+            log.warning("Best %s=%g is on the edge of its grid", name, value)
+    return best
+
+
+def run_incidence(
+    data: Data,
+    at_risk_only: bool,
+    folds: list[tuple[np.ndarray, np.ndarray]],
+    band_grid: tuple[float, ...],
+    strength_grid: tuple[float, ...],
+) -> ModelResult:
     rows = []
-    folds = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
-    for fold, (fit_idx, held_idx) in enumerate(folds.split(train)):
-        fit_part, held_part = train.iloc[fit_idx], train.iloc[held_idx]
-        featurizer = BagOfCodes(feature_config).fit(events, fit_part)
-        x_fit = featurizer.transform(events, fit_part).to_numpy()
-        x_held = featurizer.transform(events, held_part).to_numpy()
+    for fold, (fit_idx, held_idx) in enumerate(folds):
+        fit_part, held_part = data.train.iloc[fit_idx], data.train.iloc[held_idx]
+        for band, strength in itertools.product(band_grid, strength_grid):
+            model = StratifiedIncidence(band, strength, at_risk_only).fit(
+                fit_part, data.y_train[fit_idx], data.prior_train[fit_idx]
+            )
+            scores = model.predict_proba(held_part, data.prior_train[held_idx])
+            rows.append(
+                {
+                    "fold": fold,
+                    "band_years": band,
+                    "prior_strength": strength,
+                    **summarize(data.y_train[held_idx], scores, data.codes),
+                }
+            )
+    cv = pd.DataFrame(rows)
+    params = select_best(cv, {"band_years": band_grid, "prior_strength": strength_grid})
+    model = StratifiedIncidence(params["band_years"], params["prior_strength"], at_risk_only).fit(
+        data.train, data.y_train, data.prior_train
+    )
+    p_val = model.predict_proba(data.val, data.prior_val)
+    return ModelResult(cv=cv, params=params, p_val=p_val, extras={"n_strata": len(model.strata_)})
+
+
+def run_logreg(
+    data: Data,
+    feature_config: FeatureConfig,
+    folds: list[tuple[np.ndarray, np.ndarray]],
+    c_grid: tuple[float, ...],
+    n_jobs: int,
+) -> ModelResult:
+    rows = []
+    for fold, (fit_idx, held_idx) in enumerate(folds):
+        fit_part, held_part = data.train.iloc[fit_idx], data.train.iloc[held_idx]
+        featurizer = BagOfCodes(feature_config).fit(data.events, fit_part)
+        x_fit = featurizer.transform(data.events, fit_part).to_numpy()
+        x_held = featurizer.transform(data.events, held_part).to_numpy()
         for c in c_grid:
-            model = MultiLabelLogistic(C=c, n_jobs=n_jobs).fit(x_fit, y_train[fit_idx])
-            scores = summarize(y_train[held_idx], model.predict_proba(x_held), codes)
+            model = MultiLabelLogistic(C=c, n_jobs=n_jobs).fit(x_fit, data.y_train[fit_idx])
             rows.append(
                 {
                     "fold": fold,
                     "C": c,
                     "n_features": x_fit.shape[1],
                     "not_converged": model.n_not_converged_,
-                    **scores,
+                    **summarize(data.y_train[held_idx], model.predict_proba(x_held), data.codes),
                 }
             )
-        log.info("  fold %d/%d done (%d features)", fold + 1, n_folds, x_fit.shape[1])
-    return pd.DataFrame(rows)
+        log.info("  fold %d/%d done (%d features)", fold + 1, len(folds), x_fit.shape[1])
+    cv = pd.DataFrame(rows)
+    params = select_best(cv, {"C": c_grid})
 
-
-def select_c(cv: pd.DataFrame, c_grid: tuple[float, ...]) -> float:
-    mean_auroc = cv.groupby("C")["macro_auroc"].mean()
-    best = float(mean_auroc.index.to_numpy(dtype="float64")[int(np.argmax(mean_auroc.to_numpy()))])
-    if best in (min(c_grid), max(c_grid)):
-        log.warning("Best C=%g is on the edge of the grid; consider widening it", best)
-    return best
+    featurizer = BagOfCodes(feature_config).fit(data.events, data.train)
+    x_train = featurizer.transform(data.events, data.train)
+    x_val = featurizer.transform(data.events, data.val)
+    model = MultiLabelLogistic(C=params["C"], n_jobs=n_jobs).fit(x_train.to_numpy(), data.y_train)
+    return ModelResult(
+        cv=cv,
+        params=params,
+        p_val=model.predict_proba(x_val.to_numpy()),
+        extras={
+            "n_features": x_train.shape[1],
+            "final_model_not_converged": model.n_not_converged_,
+            "feature_config": asdict(feature_config),
+            "featurizer": featurizer,
+            "model": model,
+            "feature_names": list(x_train.columns),
+        },
+    )
 
 
 def top_features(
@@ -148,110 +270,123 @@ def run(
     models_dir: Path,
     reports_dir: Path,
     c_grid: tuple[float, ...] = DEFAULT_C_GRID,
+    band_grid: tuple[float, ...] = DEFAULT_BAND_GRID,
+    strength_grid: tuple[float, ...] = DEFAULT_PRIOR_STRENGTH_GRID,
     n_folds: int = 5,
     n_boot: int = 1000,
     n_jobs: int = -1,
     seed: int = RANDOM_SEED,
 ) -> dict[str, Any]:
-    cohort = pd.read_parquet(dataset_dir / "cohort.parquet")
-    events = pd.read_parquet(dataset_dir / "events.parquet", columns=EVENT_COLUMNS)
-    labels = pd.read_parquet(dataset_dir / "labels.parquet")
-    prior = pd.read_parquet(dataset_dir / "prior_conditions.parquet")
-    descriptions = pd.read_parquet(dataset_dir / "code_descriptions.parquet")
-    targets = pd.read_csv(dataset_dir / "targets.csv", dtype=str)
-    codes = targets["CODE"].tolist()
-    if list(labels.columns) != codes or list(prior.columns) != codes:
-        raise ValueError("label columns do not match targets.csv")
+    data, targets, descriptions = load_data(dataset_dir)
+    codes = data.codes
+    log.info(
+        "Train %d patients, val %d patients, %d targets", len(data.train), len(data.val), len(codes)
+    )
+    folds = list(KFold(n_splits=n_folds, shuffle=True, random_state=seed).split(data.train))
 
-    train = cohort[cohort["split"] == "train"]
-    val = cohort[cohort["split"] == "val"]
-    if set(train.index) & set(val.index):
-        raise AssertionError("train and val overlap")
-    y_train = labels.loc[train.index].to_numpy()
-    y_val = labels.loc[val.index].to_numpy()
-    prior_val = prior.loc[val.index].to_numpy()
-    log.info("Train %d patients, val %d patients, %d targets", len(train), len(val), len(codes))
+    results: dict[str, ModelResult] = {}
+    for name, at_risk_only in INCIDENCE_MODELS.items():
+        log.info("Model '%s': cross-validating on train", name)
+        results[name] = run_incidence(data, at_risk_only, folds, band_grid, strength_grid)
+    for name, feature_config in LOGREG_MODELS.items():
+        log.info("Model '%s': cross-validating on train", name)
+        results[name] = run_logreg(data, feature_config, folds, c_grid, n_jobs)
 
-    models_dir.mkdir(parents=True, exist_ok=True)
-    reports_dir.mkdir(parents=True, exist_ok=True)
     metrics: dict[str, Any] = {
         "protocol": {
             "c_grid": list(c_grid),
+            "band_years_grid": list(band_grid),
+            "prior_strength_grid": list(strength_grid),
             "n_folds": n_folds,
             "n_boot": n_boot,
             "seed": seed,
             "selection_metric": "mean cross-validated macro AUROC on train",
+            "reference_model": REFERENCE_MODEL,
         },
-        "feature_sets": {},
+        "models": {},
+        "comparisons": {},
     }
-    cv_tables, per_label_tables, val_predictions = [], [], {}
-    for name, feature_config in FEATURE_SETS.items():
-        started = time.perf_counter()
-        log.info("Feature set '%s': cross-validating C on train", name)
-        cv = cross_validate_c(
-            events, train, y_train, codes, feature_config, c_grid, n_folds, seed, n_jobs
-        )
-        best_c = select_c(cv, c_grid)
-
-        featurizer = BagOfCodes(feature_config).fit(events, train)
-        x_train = featurizer.transform(events, train)
-        x_val = featurizer.transform(events, val)
-        model = MultiLabelLogistic(C=best_c, n_jobs=n_jobs).fit(x_train.to_numpy(), y_train)
-        p_val = model.predict_proba(x_val.to_numpy())
-
-        summary, table = evaluate(y_val, p_val, prior_val, codes, n_boot, seed)
-        cv_mean = cv[cv["C"] == best_c][["macro_auroc", "mAP"]].mean()
+    per_label_tables, cv_tables = [], []
+    for name, result in results.items():
+        summary, table = evaluate(data.y_val, result.p_val, data.prior_val, codes, n_boot, seed)
+        best = result.cv
+        for param, value in result.params.items():
+            best = best[best[param] == value]
         summary.update(
             {
-                "best_C": best_c,
-                "n_features": x_train.shape[1],
-                "final_model_not_converged": model.n_not_converged_,
-                "cv_macro_auroc_at_best_C": float(cv_mean["macro_auroc"]),
-                "cv_mAP_at_best_C": float(cv_mean["mAP"]),
-                "feature_config": asdict(feature_config),
-                "seconds": round(time.perf_counter() - started, 1),
+                "params": result.params,
+                "cv_macro_auroc": float(best["macro_auroc"].mean()),
+                "cv_mAP": float(best["mAP"].mean()),
+                **{
+                    k: v
+                    for k, v in result.extras.items()
+                    if k not in ("featurizer", "model", "feature_names")
+                },
             }
         )
-        metrics["feature_sets"][name] = summary
-        cv_tables.append(cv.assign(feature_set=name))
+        metrics["models"][name] = summary
         per_label_tables.append(table.add_prefix(f"{name}_"))
-        val_predictions[name] = pd.DataFrame(p_val, index=val.index, columns=codes)
+        cv_tables.append(result.cv.assign(model=name))
+        ci = summary["bootstrap_95ci"]
         log.info(
-            "  %s: C=%g  val macro AUROC %.3f [%.3f, %.3f]  val mAP %.3f [%.3f, %.3f]",
+            "  %-26s val macro AUROC %.3f [%.3f, %.3f]  mAP %.3f [%.3f, %.3f]  params %s",
             name,
-            best_c,
             summary["macro_auroc"],
-            summary["bootstrap_95ci"]["macro_auroc"]["ci_low"],
-            summary["bootstrap_95ci"]["macro_auroc"]["ci_high"],
+            ci["macro_auroc"]["ci_low"],
+            ci["macro_auroc"]["ci_high"],
             summary["mAP"],
-            summary["bootstrap_95ci"]["mAP"]["ci_low"],
-            summary["bootstrap_95ci"]["mAP"]["ci_high"],
+            ci["mAP"]["ci_low"],
+            ci["mAP"]["ci_high"],
+            result.params,
         )
 
-        if name == "codes":
-            joblib.dump(
-                {
-                    "featurizer": featurizer,
-                    "model": model,
-                    "feature_names": list(x_train.columns),
-                    "codes": codes,
-                },
-                models_dir / "baseline_codes_model.joblib",
-            )
-            top_features(model, list(x_train.columns), codes, descriptions).to_csv(
-                reports_dir / "top_features_codes.csv", index=False
-            )
+    reference = results[REFERENCE_MODEL].p_val
+    for name, result in results.items():
+        if name == REFERENCE_MODEL:
+            continue
+        diff = paired_bootstrap_difference(
+            data.y_val, reference, result.p_val, n_boot=n_boot, seed=seed
+        )
+        metrics["comparisons"][f"{REFERENCE_MODEL}_minus_{name}"] = diff
+        log.info(
+            "  %s - %s: macro AUROC %+.3f [%+.3f, %+.3f]  mAP %+.3f [%+.3f, %+.3f]",
+            REFERENCE_MODEL,
+            name,
+            diff["macro_auroc"]["difference"],
+            diff["macro_auroc"]["ci_low"],
+            diff["macro_auroc"]["ci_high"],
+            diff["mAP"]["difference"],
+            diff["mAP"]["ci_low"],
+            diff["mAP"]["ci_high"],
+        )
 
+    models_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    extras = results[REFERENCE_MODEL].extras
+    joblib.dump(
+        {
+            "featurizer": extras["featurizer"],
+            "model": extras["model"],
+            "feature_names": extras["feature_names"],
+            "codes": codes,
+        },
+        models_dir / f"baseline_{REFERENCE_MODEL}.joblib",
+    )
+    top_features(extras["model"], extras["feature_names"], codes, descriptions).to_csv(
+        reports_dir / f"top_features_{REFERENCE_MODEL}.csv", index=False
+    )
     per_label = pd.concat(per_label_tables, axis=1)
     per_label.insert(0, "description", targets.set_index("CODE")["DESCRIPTION"])
-    per_label.insert(1, "train_positives", y_train.sum(axis=0))
+    per_label.insert(1, "train_positives", data.y_train.sum(axis=0))
     per_label.to_csv(reports_dir / "per_condition_val.csv", index_label="code")
     pd.concat(cv_tables, ignore_index=True).to_csv(reports_dir / "cv_results.csv", index=False)
-    for name, frame in val_predictions.items():
-        frame.to_csv(reports_dir / f"val_predictions_{name}.csv", index_label="patient_id")
+    for name, result in results.items():
+        pd.DataFrame(result.p_val, index=data.val.index, columns=codes).to_csv(
+            reports_dir / f"val_predictions_{name}.csv", index_label="patient_id"
+        )
     (reports_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
-    suspicious = per_label.index[per_label["codes_auroc"] > 0.98].tolist()
+    suspicious = per_label.index[per_label[f"{REFERENCE_MODEL}_auroc"] > 0.98].tolist()
     if suspicious:
         log.warning("Very high val AUROC for %s; review top features for leakage", suspicious)
     log.info("Wrote model to %s and reports to %s", models_dir, reports_dir)

@@ -3,8 +3,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.metrics import average_precision_score, roc_auc_score
 
-from ehrforecast.metrics import bootstrap_summary, per_label_metrics, summarize
+from ehrforecast.metrics import (
+    auroc,
+    average_precision,
+    bootstrap_summary,
+    paired_bootstrap_difference,
+    per_label_metrics,
+    summarize,
+)
 
 
 def _toy() -> tuple[np.ndarray, np.ndarray]:
@@ -45,6 +53,28 @@ def test_bootstrap_is_reproducible_and_brackets_a_strong_model() -> None:
     ci = first["macro_auroc"]
     assert ci["ci_low"] < point < ci["ci_high"]
     assert ci["ci_low"] > 0.7
+
+
+def test_paired_difference_detects_the_better_model() -> None:
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 2, size=(300, 3))
+    strong = y + rng.normal(0, 0.5, size=y.shape)
+    weak = y + rng.normal(0, 3.0, size=y.shape)
+    diff = paired_bootstrap_difference(y, strong, weak, n_boot=200, seed=1)
+    auroc = diff["macro_auroc"]
+    assert auroc["ci_low"] < auroc["difference"] < auroc["ci_high"]
+    assert auroc["ci_low"] > 0
+    reverse = paired_bootstrap_difference(y, weak, strong, n_boot=200, seed=1)
+    assert reverse["macro_auroc"]["ci_high"] < 0
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_fast_metrics_match_sklearn_including_ties(seed: int) -> None:
+    rng = np.random.default_rng(seed)
+    y = (rng.random(400) < 0.1).astype(int)
+    s = np.round(y * 0.3 + rng.random(400), 1)  # rounding creates many ties
+    assert auroc(y, s) == pytest.approx(roc_auc_score(y, s), abs=1e-12)
+    assert average_precision(y, s) == pytest.approx(average_precision_score(y, s), abs=1e-12)
 
 
 def test_shape_mismatch_raises() -> None:

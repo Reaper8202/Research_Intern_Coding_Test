@@ -91,3 +91,22 @@ held-out set. A demographics-only model is fitted the same way to show what the 
 [0.210, 0.268]: the point value was almost at the lower end. Average precision on resampled data
 is biased upwards for rare targets, because duplicated positives raise precision at the top of
 the ranking. BCa corrects this bias and gives [0.185, 0.225].
+
+## D8. Sex- and age-stratified incidence as the epidemiological reference
+
+**Decision.** Add two incidence-table baselines: the observed five-year rate of first diagnosis
+per sex and age band, and the same rate among patients at risk (prior cases excluded from the
+denominator and given probability 0). Small strata are smoothed towards the sex-specific rate
+with a pseudo-count. Band width (2.5, 5, 10, 20 years) and pseudo-count (1, 10, 100) are chosen
+by the same cross-validation on train as `C`; the result is 5-year bands and pseudo-count 10,
+inside both grids.
+
+**Reason.** A learned model is worth something only if it beats the population rates. The
+at-risk version also isolates the "already has it" effect seen in D6, so the gain from the
+clinical history can be measured on its own. The codes model is compared with every baseline by
+a paired BCa bootstrap of the difference on the same val patients, because overlapping marginal
+intervals do not show whether one model is better.
+
+**Implementation note.** The bootstraps call AUROC and AP about one million times per run. The
+sklearn functions spend most of that time on input validation, so `metrics.py` has exact
+rank-based versions. Unit tests check that they equal the sklearn values, ties included.

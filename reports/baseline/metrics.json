@@ -10,36 +10,104 @@
       0.1,
       1.0
     ],
+    "band_years_grid": [
+      2.5,
+      5.0,
+      10.0,
+      20.0
+    ],
+    "prior_strength_grid": [
+      1.0,
+      10.0,
+      100.0
+    ],
     "n_folds": 5,
     "n_boot": 1000,
     "seed": 20261028,
-    "selection_metric": "mean cross-validated macro AUROC on train"
+    "selection_metric": "mean cross-validated macro AUROC on train",
+    "reference_model": "logreg_codes"
   },
-  "feature_sets": {
-    "demographics": {
-      "macro_auroc": 0.6982976083941855,
+  "models": {
+    "incidence_age_sex": {
+      "macro_auroc": 0.6920207219288115,
+      "mAP": 0.11143117568288341,
+      "chance_mAP": 0.046917808219178084,
+      "n_targets_scored": 40,
+      "bootstrap_95ci": {
+        "macro_auroc": {
+          "ci_low": 0.6668577997397178,
+          "ci_high": 0.7163800514570753,
+          "bootstrap_std": 0.012947816632236079
+        },
+        "mAP": {
+          "ci_low": 0.0965485771728726,
+          "ci_high": 0.1157580076962561,
+          "bootstrap_std": 0.009254215986275611
+        }
+      },
+      "macro_auroc_at_risk": 0.6952746852936024,
+      "mAP_at_risk": 0.13514641433450655,
+      "params": {
+        "band_years": 5.0,
+        "prior_strength": 10.0
+      },
+      "cv_macro_auroc": 0.6924398247082018,
+      "cv_mAP": 0.10059480386880748,
+      "n_strata": 38
+    },
+    "incidence_age_sex_at_risk": {
+      "macro_auroc": 0.7268138776555684,
+      "mAP": 0.1410186540589494,
+      "chance_mAP": 0.046917808219178084,
+      "n_targets_scored": 40,
+      "bootstrap_95ci": {
+        "macro_auroc": {
+          "ci_low": 0.7025262538528051,
+          "ci_high": 0.7493626422548444,
+          "bootstrap_std": 0.01247981417962956
+        },
+        "mAP": {
+          "ci_low": 0.12013651704806376,
+          "ci_high": 0.14795280723319504,
+          "bootstrap_std": 0.010963527742131371
+        }
+      },
+      "macro_auroc_at_risk": 0.6963909806746733,
+      "mAP_at_risk": 0.1410186540589494,
+      "params": {
+        "band_years": 5.0,
+        "prior_strength": 10.0
+      },
+      "cv_macro_auroc": 0.7300540428501685,
+      "cv_mAP": 0.12221472897847334,
+      "n_strata": 38
+    },
+    "logreg_demographics": {
+      "macro_auroc": 0.6982976093888282,
       "mAP": 0.11340335458859634,
       "chance_mAP": 0.046917808219178084,
       "n_targets_scored": 40,
       "bootstrap_95ci": {
         "macro_auroc": {
-          "ci_low": 0.6745567331339417,
-          "ci_high": 0.7219068287758643,
-          "bootstrap_std": 0.012912817955828026
+          "ci_low": 0.6745567321748753,
+          "ci_high": 0.7219068249826992,
+          "bootstrap_std": 0.012912817939598923
         },
         "mAP": {
           "ci_low": 0.10165961961296319,
-          "ci_high": 0.11822985249033119,
-          "bootstrap_std": 0.011382468205211636
+          "ci_high": 0.11822985249033122,
+          "bootstrap_std": 0.011382468205211637
         }
       },
-      "macro_auroc_at_risk": 0.700386354976857,
-      "mAP_at_risk": 0.1348927258967192,
-      "best_C": 1.0,
+      "macro_auroc_at_risk": 0.7003863543272019,
+      "mAP_at_risk": 0.13489272589671922,
+      "params": {
+        "C": 1.0
+      },
+      "cv_macro_auroc": 0.6942349492013454,
+      "cv_mAP": 0.10192625879213617,
       "n_features": 8,
       "final_model_not_converged": 0,
-      "cv_macro_auroc_at_best_C": 0.6942349488297983,
-      "cv_mAP_at_best_C": 0.10192625879213617,
       "feature_config": {
         "min_patients": 10,
         "recent_years": 2.0,
@@ -55,33 +123,34 @@
           80.0
         ],
         "include_codes": false
-      },
-      "seconds": 58.5
+      }
     },
-    "codes": {
-      "macro_auroc": 0.7556440389623541,
+    "logreg_codes": {
+      "macro_auroc": 0.7556440405547619,
       "mAP": 0.2168714146822866,
       "chance_mAP": 0.046917808219178084,
       "n_targets_scored": 40,
       "bootstrap_95ci": {
         "macro_auroc": {
-          "ci_low": 0.7351492196921194,
-          "ci_high": 0.7754073937417896,
-          "bootstrap_std": 0.010610709116202757
+          "ci_low": 0.7351492274437845,
+          "ci_high": 0.7754073960878825,
+          "bootstrap_std": 0.010610709076566183
         },
         "mAP": {
           "ci_low": 0.1852819509244484,
           "ci_high": 0.2254227197091655,
-          "bootstrap_std": 0.01426833730725437
+          "bootstrap_std": 0.014268337307254365
         }
       },
-      "macro_auroc_at_risk": 0.7329844979052857,
+      "macro_auroc_at_risk": 0.732984495908022,
       "mAP_at_risk": 0.22174866292923512,
-      "best_C": 0.003,
+      "params": {
+        "C": 0.003
+      },
+      "cv_macro_auroc": 0.7274583530426024,
+      "cv_mAP": 0.18569138938442717,
       "n_features": 1070,
       "final_model_not_converged": 0,
-      "cv_macro_auroc_at_best_C": 0.7274583524741285,
-      "cv_mAP_at_best_C": 0.18569138938442717,
       "feature_config": {
         "min_patients": 10,
         "recent_years": 2.0,
@@ -97,8 +166,45 @@
           80.0
         ],
         "include_codes": true
+      }
+    }
+  },
+  "comparisons": {
+    "logreg_codes_minus_incidence_age_sex": {
+      "macro_auroc": {
+        "difference": 0.0636233186259505,
+        "ci_low": 0.035531236042926254,
+        "ci_high": 0.09024270506517246
       },
-      "seconds": 97.0
+      "mAP": {
+        "difference": 0.10544023899940318,
+        "ci_low": 0.06868112261869586,
+        "ci_high": 0.1235443386993113
+      }
+    },
+    "logreg_codes_minus_incidence_age_sex_at_risk": {
+      "macro_auroc": {
+        "difference": 0.02883016289919349,
+        "ci_low": 0.0030350021482288066,
+        "ci_high": 0.05412514462865709
+      },
+      "mAP": {
+        "difference": 0.07585276062333715,
+        "ci_low": 0.03931241048851222,
+        "ci_high": 0.09813541849960121
+      }
+    },
+    "logreg_codes_minus_logreg_demographics": {
+      "macro_auroc": {
+        "difference": 0.05734643116593363,
+        "ci_low": 0.03306078658260526,
+        "ci_high": 0.08246164484214324
+      },
+      "mAP": {
+        "difference": 0.10346806009369018,
+        "ci_low": 0.06695423816495359,
+        "ci_high": 0.12901433853426092
+      }
     }
   }
 }

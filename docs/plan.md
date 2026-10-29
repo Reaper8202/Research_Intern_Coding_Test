@@ -9,7 +9,7 @@ must be leak-free, use the provided splits, and train only on the training split
 | Step | Content | Status |
 |------|---------|--------|
 | 1 | Anchors, leak-free history, labels (`ehrforecast.build_dataset`) | done |
-| 2 | Logistic-regression baseline on code counts plus age and sex (`ehrforecast.train_baseline`) | done |
+| 2 | Baselines: age-sex incidence tables and logistic regression on code counts plus age and sex (`ehrforecast.train_baseline`) | done |
 | 3 | Tokenizer: events to token sequences, time-gap tokens, lab-value bins | planned |
 | 4 | Small decoder transformer: next-event pretraining, then multi-label fine-tuning, wandb | planned |
 | 5 | Test predictions, report, GitHub, Hugging Face | planned |
