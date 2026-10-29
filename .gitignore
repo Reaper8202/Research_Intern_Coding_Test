@@ -1,0 +1,16 @@
+# Raw data is never committed. `data` is a local symlink to the dataset folder.
+data
+data/
+artifacts/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
