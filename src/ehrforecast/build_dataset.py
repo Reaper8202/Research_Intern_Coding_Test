@@ -1,6 +1,6 @@
 """Step 1: compute anchors, cut timelines at the anchor without leakage, and build labels.
 
-Outputs (in ``--out``):
+Processed data (in ``--out``):
 
 * ``cohort.parquet``: one row per patient with split, demographics, and anchor dates.
 * ``events.parquet``: all pre-anchor events for every split, in the long event format.
@@ -8,11 +8,16 @@ Outputs (in ``--out``):
 * ``prior_conditions.parquet``: target conditions already present before the anchor (all splits).
 * ``code_descriptions.parquet``: description for each (source, code) pair.
 * ``targets.csv``: scored codes in submission column order.
-* ``label_prevalence.csv`` and ``dataset_report.json``: checks and train/test parity statistics.
+
+Reports (in ``--reports``):
+
+* ``dataset_report.json``: train/val/test parity statistics.
+* ``label_prevalence.csv``: positives and prevalence per target in train and val.
 
 Usage::
 
-    python -m ehrforecast.build_dataset --data-dir data --out artifacts/dataset
+    python -m ehrforecast.build_dataset --data-dir data/raw --out data/processed \
+        --reports reports/dataset --log-file logs/build_dataset.log
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from ehrforecast.config import DataLayout
 from ehrforecast.events import build_code_descriptions, build_events
 from ehrforecast.io import read_all_event_tables, read_patients
 from ehrforecast.labels import build_labels, build_prior_flags
+from ehrforecast.logging_utils import setup_logging
 from ehrforecast.parity import blank_stop_fraction, history_summary, label_prevalence
 from ehrforecast.schema import EVENT_TABLES
 from ehrforecast.truncation import find_post_anchor_values, truncate_table
@@ -46,7 +52,7 @@ def _check_tables_belong_to(
             raise ValueError(f"{where}/{name}.csv has {len(stray)} patients from another split")
 
 
-def build(data_dir: Path, out_dir: Path) -> dict[str, object]:
+def build(data_dir: Path, out_dir: Path, reports_dir: Path) -> dict[str, object]:
     layout = DataLayout(data_dir)
     layout.validate()
 
@@ -146,23 +152,26 @@ def build(data_dir: Path, out_dir: Path) -> dict[str, object]:
     prior.to_parquet(out_dir / "prior_conditions.parquet")
     descriptions.to_parquet(out_dir / "code_descriptions.parquet", index=False)
     targets.to_csv(out_dir / "targets.csv", index=False)
+    log.info("Wrote processed data to %s", out_dir)
+
+    reports_dir.mkdir(parents=True, exist_ok=True)
     prevalence = label_prevalence(labels, cohort)
     prevalence.insert(0, "description", targets.set_index("CODE")["DESCRIPTION"])
-    prevalence.to_csv(out_dir / "label_prevalence.csv", index_label="code")
-    (out_dir / "dataset_report.json").write_text(json.dumps(report, indent=2, default=str))
-    log.info("Wrote dataset artifacts to %s", out_dir)
+    prevalence.to_csv(reports_dir / "label_prevalence.csv", index_label="code")
+    (reports_dir / "dataset_report.json").write_text(json.dumps(report, indent=2, default=str))
+    log.info("Wrote dataset reports to %s", reports_dir)
     return report
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-dir", type=Path, required=True, help="folder with the task files")
-    parser.add_argument("--out", type=Path, required=True, help="output folder")
+    parser.add_argument("--out", type=Path, required=True, help="processed-data folder")
+    parser.add_argument("--reports", type=Path, required=True, help="report folder")
+    parser.add_argument("--log-file", type=Path, default=None, help="optional log file")
     args = parser.parse_args(argv)
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
-    report = build(args.data_dir, args.out)
+    setup_logging(args.log_file)
+    report = build(args.data_dir, args.out, args.reports)
     log.info("Report:\n%s", json.dumps(report, indent=2, default=str))
 
 

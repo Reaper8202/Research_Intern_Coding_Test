@@ -1,0 +1,89 @@
+{
+  "n_events": 1431561,
+  "n_events_by_source": {
+    "encounters": 180353,
+    "conditions": 31531,
+    "medications": 530422,
+    "careplans": 12879,
+    "allergies": 732,
+    "devices": 259,
+    "procedures": 52220,
+    "immunizations": 17606,
+    "observations": 604284,
+    "imaging_studies": 1275
+  },
+  "history_summary": {
+    "train": {
+      "n_patients": 2791,
+      "patients_without_history": 0,
+      "events_per_patient_median": 213.0,
+      "events_per_patient_p90": 635.0,
+      "history_years_median": 43.1,
+      "age_at_anchor_median": 64.28,
+      "female_fraction": 0.4396,
+      "days_last_event_to_anchor_median": 30.0,
+      "days_last_event_to_anchor_share": {
+        "0": 0.0,
+        "1": 0.0473,
+        "2": 0.0107,
+        "3": 0.009
+      }
+    },
+    "val": {
+      "n_patients": 365,
+      "patients_without_history": 0,
+      "events_per_patient_median": 217.0,
+      "events_per_patient_p90": 646.4000000000001,
+      "history_years_median": 44.18,
+      "age_at_anchor_median": 65.11,
+      "female_fraction": 0.4521,
+      "days_last_event_to_anchor_median": 32.0,
+      "days_last_event_to_anchor_share": {
+        "0": 0.0,
+        "1": 0.0493,
+        "2": 0.0055,
+        "3": 0.0055
+      }
+    },
+    "test": {
+      "n_patients": 358,
+      "patients_without_history": 0,
+      "events_per_patient_median": 219.5,
+      "events_per_patient_p90": 590.5,
+      "history_years_median": 42.98,
+      "age_at_anchor_median": 63.44,
+      "female_fraction": 0.4497,
+      "days_last_event_to_anchor_median": 36.0,
+      "days_last_event_to_anchor_share": {
+        "0": 0.0,
+        "1": 0.0335,
+        "2": 0.0028,
+        "3": 0.0112
+      }
+    }
+  },
+  "blank_stop_fraction": {
+    "train_val_truncated": {
+      "encounters": 0.0003,
+      "conditions": 0.7313,
+      "medications": 0.0363,
+      "careplans": 0.6567,
+      "allergies": 0.9645,
+      "devices": 1.0
+    },
+    "test_released": {
+      "encounters": 0.0003,
+      "conditions": 0.7304,
+      "medications": 0.0441,
+      "careplans": 0.667,
+      "allergies": 0.9419,
+      "devices": 1.0
+    }
+  },
+  "label_positives_total": 5899,
+  "prior_condition_rate_by_split": {
+    "train": 0.0948,
+    "val": 0.09089,
+    "test": 0.09483
+  }
+}

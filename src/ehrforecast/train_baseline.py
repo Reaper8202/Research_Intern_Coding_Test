@@ -12,9 +12,13 @@ Protocol:
 Two feature sets are compared: ``demographics`` (age and sex only) and ``codes`` (bag-of-codes
 plus age and sex). The gap between them shows how much the clinical history adds.
 
+Outputs: the fitted ``codes`` model goes to ``--models``; metrics, per-target tables,
+cross-validation results, top features, and val predictions go to ``--reports``.
+
 Usage::
 
-    python -m ehrforecast.train_baseline --dataset artifacts/dataset --out artifacts/baseline
+    python -m ehrforecast.train_baseline --dataset data/processed --models models/baseline \
+        --reports reports/baseline --log-file logs/train_baseline.log
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ from sklearn.model_selection import KFold
 from ehrforecast.baseline import MultiLabelLogistic
 from ehrforecast.config import RANDOM_SEED
 from ehrforecast.features import BagOfCodes, FeatureConfig
+from ehrforecast.logging_utils import setup_logging
 from ehrforecast.metrics import bootstrap_summary, per_label_metrics, summarize
 
 log = logging.getLogger("ehrforecast.train_baseline")
@@ -140,7 +145,8 @@ def evaluate(
 
 def run(
     dataset_dir: Path,
-    out_dir: Path,
+    models_dir: Path,
+    reports_dir: Path,
     c_grid: tuple[float, ...] = DEFAULT_C_GRID,
     n_folds: int = 5,
     n_boot: int = 1000,
@@ -166,7 +172,8 @@ def run(
     prior_val = prior.loc[val.index].to_numpy()
     log.info("Train %d patients, val %d patients, %d targets", len(train), len(val), len(codes))
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    models_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
     metrics: dict[str, Any] = {
         "protocol": {
             "c_grid": list(c_grid),
@@ -229,43 +236,44 @@ def run(
                     "feature_names": list(x_train.columns),
                     "codes": codes,
                 },
-                out_dir / "baseline_codes_model.joblib",
+                models_dir / "baseline_codes_model.joblib",
             )
             top_features(model, list(x_train.columns), codes, descriptions).to_csv(
-                out_dir / "top_features_codes.csv", index=False
+                reports_dir / "top_features_codes.csv", index=False
             )
 
     per_label = pd.concat(per_label_tables, axis=1)
     per_label.insert(0, "description", targets.set_index("CODE")["DESCRIPTION"])
     per_label.insert(1, "train_positives", y_train.sum(axis=0))
-    per_label.to_csv(out_dir / "per_condition_val.csv", index_label="code")
-    pd.concat(cv_tables, ignore_index=True).to_csv(out_dir / "cv_results.csv", index=False)
+    per_label.to_csv(reports_dir / "per_condition_val.csv", index_label="code")
+    pd.concat(cv_tables, ignore_index=True).to_csv(reports_dir / "cv_results.csv", index=False)
     for name, frame in val_predictions.items():
-        frame.to_csv(out_dir / f"val_predictions_{name}.csv", index_label="patient_id")
-    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+        frame.to_csv(reports_dir / f"val_predictions_{name}.csv", index_label="patient_id")
+    (reports_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
     suspicious = per_label.index[per_label["codes_auroc"] > 0.98].tolist()
     if suspicious:
         log.warning("Very high val AUROC for %s; review top features for leakage", suspicious)
-    log.info("Wrote baseline artifacts to %s", out_dir)
+    log.info("Wrote model to %s and reports to %s", models_dir, reports_dir)
     return metrics
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--dataset", type=Path, required=True, help="step 1 output folder")
-    parser.add_argument("--out", type=Path, required=True, help="output folder")
+    parser.add_argument("--dataset", type=Path, required=True, help="processed-data folder")
+    parser.add_argument("--models", type=Path, required=True, help="model output folder")
+    parser.add_argument("--reports", type=Path, required=True, help="report output folder")
+    parser.add_argument("--log-file", type=Path, default=None, help="optional log file")
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--bootstrap", type=int, default=1000)
     parser.add_argument("--jobs", type=int, default=-1)
     parser.add_argument("--seed", type=int, default=RANDOM_SEED)
     args = parser.parse_args(argv)
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
+    setup_logging(args.log_file)
     run(
         args.dataset,
-        args.out,
+        args.models,
+        args.reports,
         n_folds=args.folds,
         n_boot=args.bootstrap,
         n_jobs=args.jobs,

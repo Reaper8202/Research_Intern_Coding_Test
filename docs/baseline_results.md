@@ -14,7 +14,7 @@ chosen `C` is 0.728. For the demographics model the CV curve is flat (0.6925 to 
 whole grid), so the "C on grid edge" warning has no practical effect.
 
 Reproduce: `make dataset && make baseline`. Full per-target numbers are in
-`artifacts/baseline/per_condition_val.csv`.
+`reports/baseline/per_condition_val.csv`.
 
 ## Leakage review of the highest scores
 

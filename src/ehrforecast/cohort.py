@@ -1,6 +1,6 @@
 """Patient splits, anchor dates, and the per-patient cohort table.
 
-Anchor convention (checked against the released test files, see docs/DECISIONS.md):
+Anchor convention (checked against the released test files, see docs/decisions.md):
 
 * ``last_encounter`` is the latest ``STOP`` over the patient's encounters, with ``START`` used for
   any encounter whose ``STOP`` is blank.

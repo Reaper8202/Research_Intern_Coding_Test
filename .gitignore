@@ -1,7 +1,9 @@
-# Raw data is never committed. `data` is a local symlink to the dataset folder.
-data
-data/
-artifacts/
+# Data, trained models, and logs are produced locally and never committed.
+# data/raw is a link to the task dataset; data/processed is written by `make dataset`.
+data/*
+!data/README.md
+models/
+logs/
 
 # Python
 .venv/

@@ -1,0 +1,104 @@
+{
+  "protocol": {
+    "c_grid": [
+      0.0001,
+      0.0003,
+      0.001,
+      0.003,
+      0.01,
+      0.03,
+      0.1,
+      1.0
+    ],
+    "n_folds": 5,
+    "n_boot": 1000,
+    "seed": 20261028,
+    "selection_metric": "mean cross-validated macro AUROC on train"
+  },
+  "feature_sets": {
+    "demographics": {
+      "macro_auroc": 0.6982976083941855,
+      "mAP": 0.11340335458859634,
+      "chance_mAP": 0.046917808219178084,
+      "n_targets_scored": 40,
+      "bootstrap_95ci": {
+        "macro_auroc": {
+          "ci_low": 0.6745567331339417,
+          "ci_high": 0.7219068287758643,
+          "bootstrap_std": 0.012912817955828026
+        },
+        "mAP": {
+          "ci_low": 0.10165961961296319,
+          "ci_high": 0.11822985249033119,
+          "bootstrap_std": 0.011382468205211636
+        }
+      },
+      "macro_auroc_at_risk": 0.700386354976857,
+      "mAP_at_risk": 0.1348927258967192,
+      "best_C": 1.0,
+      "n_features": 8,
+      "final_model_not_converged": 0,
+      "cv_macro_auroc_at_best_C": 0.6942349488297983,
+      "cv_mAP_at_best_C": 0.10192625879213617,
+      "feature_config": {
+        "min_patients": 10,
+        "recent_years": 2.0,
+        "kinds": [
+          "start",
+          "point"
+        ],
+        "age_band_edges": [
+          18.0,
+          35.0,
+          50.0,
+          65.0,
+          80.0
+        ],
+        "include_codes": false
+      },
+      "seconds": 58.5
+    },
+    "codes": {
+      "macro_auroc": 0.7556440389623541,
+      "mAP": 0.2168714146822866,
+      "chance_mAP": 0.046917808219178084,
+      "n_targets_scored": 40,
+      "bootstrap_95ci": {
+        "macro_auroc": {
+          "ci_low": 0.7351492196921194,
+          "ci_high": 0.7754073937417896,
+          "bootstrap_std": 0.010610709116202757
+        },
+        "mAP": {
+          "ci_low": 0.1852819509244484,
+          "ci_high": 0.2254227197091655,
+          "bootstrap_std": 0.01426833730725437
+        }
+      },
+      "macro_auroc_at_risk": 0.7329844979052857,
+      "mAP_at_risk": 0.22174866292923512,
+      "best_C": 0.003,
+      "n_features": 1070,
+      "final_model_not_converged": 0,
+      "cv_macro_auroc_at_best_C": 0.7274583524741285,
+      "cv_mAP_at_best_C": 0.18569138938442717,
+      "feature_config": {
+        "min_patients": 10,
+        "recent_years": 2.0,
+        "kinds": [
+          "start",
+          "point"
+        ],
+        "age_band_edges": [
+          18.0,
+          35.0,
+          50.0,
+          65.0,
+          80.0
+        ],
+        "include_codes": true
+      },
+      "seconds": 97.0
+    }
+  }
+}

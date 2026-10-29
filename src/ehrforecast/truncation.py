@@ -1,6 +1,6 @@
 """Cut train and val timelines at the anchor exactly the way the released test files are cut.
 
-Rules, each checked against the test files (see docs/DECISIONS.md):
+Rules, each checked against the test files (see docs/decisions.md):
 
 1. Keep a row only when its start or event date is before the anchor day.
 2. Keep the row when its ``STOP`` is on or after the anchor day, but blank the ``STOP``. The test
