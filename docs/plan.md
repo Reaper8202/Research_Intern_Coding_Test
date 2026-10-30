@@ -10,8 +10,8 @@ must be leak-free, use the provided splits, and train only on the training split
 |------|---------|--------|
 | 1 | Anchors, leak-free history, labels (`ehrforecast.build_dataset`) | done |
 | 2 | Baselines: age-sex incidence tables and logistic regression on code counts plus age and sex (`ehrforecast.train_baseline`) | done |
-| 3 | Tokenizer: events to token sequences, time-gap tokens, lab-value bins | planned |
-| 4 | Small decoder transformer: next-event pretraining, then multi-label fine-tuning, wandb | planned |
+| 3 | Representation: folds, mask, extra baselines, tokenizer, sequences, leak tests (`model_plan.md` P3a–P3c) | planned |
+| 4 | Decoder transformer: pretraining, fine-tuning, zero-shot, clinical scores, one val run (`model_plan.md` P4a–P4f) | planned |
 | 5 | Test predictions, report, GitHub, Hugging Face | planned |
 
 ## Where each known risk is handled
@@ -30,26 +30,18 @@ must be leak-free, use the provided splits, and train only on the training split
 
 | Risk | Handling | Where |
 |------|----------|-------|
-| Long timelines (median 213 pre-anchor events, p90 635, max several thousand) | Step 3: group events by encounter, collapse repeated identical observations and medication refills, keep demographic prefix tokens plus the most recent tokens up to the context length (left truncation). Measure the token-length distribution before choosing the context length. | step 3 |
+| Long timelines (median 213 pre-anchor events, p90 635, max several thousand) | Collapse same-day duplicates and medication refills; condition summary plus the most recent tokens up to 1,024 (left truncation). See `model_plan.md` 8.3–8.4. | step 3 |
 | Genomics download incomplete, almost no test coverage (2 of 358) | Not used. Stated in the report. | report |
 | Imaging DICOM files: 9.2 GB, 28 test patients | DICOM files not used. Imaging study events from `imaging_studies.csv` are used. | `schema.py` |
-| Little data for transformer pretraining | Small model (a few million parameters), dropout, weight decay, early stopping on val loss. Optional extra anchors per training patient, kept only if val improves. The baseline stays in the report as the bar to beat, with paired bootstrap comparison. | step 4 |
+| Little data for transformer pretraining | Small model (a few million parameters), dropout, weight decay, early stopping on held-out CV folds (val is not used for choices, `model_plan.md` D9). Optional extra anchors per training patient, kept only if CV improves (E3). The baseline stays in the report as the bar to beat, with paired bootstrap comparison. | step 4 |
 
-## Step 3 to 5 design notes
+## Step 3 to 5 design
 
-* One input unit is one event token, `source:code`. Numeric observations add a value-bin token
-  (per-code deciles computed on training data only). Text observations add a value token.
-* Time: a gap token between consecutive events, from a fixed set of buckets (same day, under a
-  week, under a month, under 3 months, under 6 months, under a year, under 2 years, longer). Age
-  at anchor and sex are prefix tokens.
-* The vocabulary is fitted on training patients only; rare tokens map to `[UNK]`.
-* Pretraining uses training patients only. Whether to pretrain on full training timelines or on
-  pre-anchor history only is decided on val loss; neither option touches val or test data.
-* Fine-tuning: a 40-way sigmoid head on the final position of the pre-anchor sequence, binary
-  cross-entropy. Checkpoint selection on val macro AUROC.
-* Submission check script: 358 rows, IDs equal `test_anchors.csv`, 40 columns named and ordered
-  as `target_conditions.csv`, probabilities in [0, 1], no missing values.
+The full plan is in `model_plan.md` (decisions D9–D22, evaluation protocol, phases, experiment,
+test, and risk registers). It replaces the earlier design notes here, which chose checkpoints on
+val; that is no longer the protocol (D9).
 
 ## Open decision
 
 * Name on the PDF report and the GitHub / Hugging Face account to publish under.
+* Step 3 to 5 open items (wandb entity): `model_plan.md` section 18.
