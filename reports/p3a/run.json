@@ -1,8 +1,8 @@
 {
   "baseline_reproduced": true,
-  "completed_at": "2026-10-31T18:19:03.719526+00:00",
+  "completed_at": "2026-10-31T19:16:39.118502+00:00",
   "generation_status": "deferred",
-  "input_manifest_sha256": "b65ef9b86d86e215b05cf85f091780d4acbccd4e04655d1b9f789131573810d4",
+  "input_manifest_sha256": "4ada39756fcf241a5472104775cf4cb841159ef173af8709e17423edf517f133",
   "metric_version": "first-diagnosis-probabilities-v2",
   "official_val_scored": false,
   "phase": "P3a",
@@ -51,6 +51,6 @@
     },
     "training_positives": 5214
   },
-  "started_at": "2026-10-31T18:18:46.389392+00:00",
+  "started_at": "2026-10-31T19:16:21.722031+00:00",
   "status": "passed"
 }

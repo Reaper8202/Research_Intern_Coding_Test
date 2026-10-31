@@ -2,13 +2,13 @@
   "binary_classifier_fits": 200,
   "configuration_count": 1,
   "fold_seconds": [
-    0.8776017078198493,
-    0.881932916585356,
-    0.8871365003287792,
-    0.9430623333901167,
-    0.8617650419473648
+    0.8966465000994503,
+    0.906203624792397,
+    0.9007766670547426,
+    0.8854670422151685,
+    0.8637426667846739
   ],
   "grid_search_permitted_before_G2": false,
   "next_budget_check": "Measure LightGBM and transformer costs during the later phases.",
-  "total_seconds": 4.451498500071466
+  "total_seconds": 4.452836500946432
 }
