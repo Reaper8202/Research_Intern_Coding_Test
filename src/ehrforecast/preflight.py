@@ -360,8 +360,13 @@ def run(
             ).strip(),
             "git_worktree_dirty": bool(
                 subprocess.check_output(
-                    ["git", "status", "--porcelain"], cwd=project_root, text=True
+                    ["git", "status", "--porcelain", "--untracked-files=no"],
+                    cwd=project_root,
+                    text=True,
                 ).strip()
+            ),
+            "dirty_scope_note": (
+                "Tracked files only. code_sha256 covers every source file, tracked or not."
             ),
             "hash_scope_note": (
                 "File hashes include whole supplied files; fitting used training rows only."
