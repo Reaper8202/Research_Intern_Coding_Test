@@ -51,3 +51,19 @@ def test_prior_flags_come_from_history_only() -> None:
     prior = build_prior_flags(history, _cohort().index, CODES)
     assert prior.loc["p"].to_numpy().tolist() == [1, 0, 0, 0]
     assert prior.loc["empty"].sum() == 0
+
+
+def test_calendar_horizon_includes_feb_28_but_not_march_1_after_leap_anchor() -> None:
+    cohort = pd.DataFrame(
+        {"anchor_date": [day("2020-02-29")], "window_end": [day("2025-02-28")]},
+        index=pd.Index(["p"], name="patient_id"),
+    )
+    conditions = pd.DataFrame(
+        {
+            "PATIENT": ["p"] * 5,
+            "CODE": ["prior", "prior", "anchor", "last", "late"],
+            "START": ts("2020-02-28", "2021-01-01", "2020-02-29", "2025-02-28", "2025-03-01"),
+        }
+    )
+    labels = build_labels(conditions, cohort, ["prior", "anchor", "last", "late"])
+    assert labels.loc["p"].to_numpy().tolist() == [0, 1, 1, 0]

@@ -4,8 +4,19 @@ Predicts which of 40 conditions a patient will be diagnosed with for the first t
 years after a landmark ("anchor") date, using only the synthetic EHR events recorded before that
 date. Data: the Synthea Coherent dataset as released for the research intern coding test.
 
-Status: step 1 (anchors, leak-free history, labels) and step 2 (logistic-regression baseline) are
-done. The sequence model comes next. See `docs/plan.md`.
+Status: steps 1 and 2 (leak-free dataset, baselines) are done. Step 3 (folds, data audits, fold
+tokenizers, and patient sequences) is done. The transformer training code is done and passed a
+tiny end-to-end check on training data. Full transformer training comes next. See
+[the project plan](docs/plan.md) and [model plan version 2.3](docs/model_plan.md).
+
+The planned final model is a transformer trained from random weights on the supplied training
+data. Any self-pretraining uses only training histories before their anchors. External datasets
+and pretrained weights are excluded. Logistic regression and LightGBM are comparison methods.
+
+The assessment demonstrates a correct, leak-free, reproducible training pipeline. The plan starts
+with a small transformer and a complete run through training, checkpoint recovery, reload, and
+prediction. Broader experiments follow only after these checks pass. Clinical usefulness is not
+a project objective.
 
 ## Project structure
 
@@ -17,15 +28,20 @@ ehr-forecast/
 │   └── processed/           step 1 output (not committed)
 ├── docs/
 │   ├── plan.md              steps and where each known risk is handled
+│   ├── model_plan.md        revised transformer design and evaluation protocol
 │   ├── decisions.md         every data decision with the evidence for it
 │   └── baseline_results.md  step 2 results and leakage review
-├── models/                  trained models (not committed)
+├── configs/                 P3a, transformer, and smoke-test settings
+├── models/                  trained models and fold tokenizers (not committed)
 ├── reports/
-│   ├── dataset/             step 1 checks: train/val/test parity, label prevalence
-│   └── baseline/            step 2 metrics, per-condition table, CV results, val predictions
+│   ├── dataset/             step 1 checks: train/val/test parity, label prevalence, omitted stops
+│   ├── baseline/            step 2 metrics, per-condition table, CV results, val predictions
+│   ├── p3a/                 P3a audits: baseline reproduction, units, fold support, manifest
+│   ├── representation/      per-fold vocabulary, truncation, and retention reports
+│   └── transformer/         generation deferral record and the G2 smoke-test report
 ├── logs/                    run logs (not committed)
 ├── src/ehrforecast/         Python package
-├── tests/                   unit tests on small hand-made tables
+├── tests/                   unit tests on small hand-made and synthetic tables
 ├── Makefile                 setup, checks, and pipeline commands
 ├── pyproject.toml           package metadata and tool settings
 └── requirements-lock.txt    exact dependency versions
@@ -46,10 +62,30 @@ ln -s /path/to/research_intern_coding_test data/raw
 make check      # ruff lint + format check, mypy, pytest
 make dataset    # step 1: data/raw -> data/processed, reports/dataset
 make baseline   # step 2: models/baseline, reports/baseline
+make folds      # P3a: save and verify the five training folds
+make preflight  # P3a: training-only audits and baseline reproduction; does not score val
+make tokenize   # P3b-P3c: fold tokenizers, patient histories, reports/representation
+make pipeline-smoke   # G2: tiny end-to-end run on fold 0, temporary outputs
 ```
 
-Step 1 takes about 20 seconds and step 2 about 2 minutes on a laptop. `make clean` removes
-everything that these commands generate, except the committed reports.
+Transformer training, one fold at a time (settings in `configs/transformer.toml`):
+
+```bash
+make pretrain FOLD=0              # self-pretraining on fit patients' pre-anchor histories
+make finetune FOLD=0 METHOD=S     # S: random init; H: fixed pretrained body; F: full fine-tuning
+make finetune FOLD=0 METHOD=H
+make finetune FOLD=0 METHOD=F
+make pretrain FOLD=0 RESUME=1     # continue an interrupted run from its last completed epoch
+```
+
+Each run writes `models/transformer/<config>/fold<k>/<run>/` with `best.pt`, `last.pt`,
+`metrics.jsonl`, and `run.json`. wandb logs offline; sync them with `wandb sync`.
+`python -m ehrforecast.predict` scores held-out training patients or the test split from saved
+fold models. It reads no labels and refuses official val.
+
+On a laptop: step 1 takes about 20 seconds, step 2 about 2 minutes, `make preflight` and
+`make pipeline-smoke` about 20 seconds each, and `make tokenize` about 45 seconds. `make clean`
+removes everything that these commands generate, except the committed reports.
 
 ## How leakage is prevented
 
@@ -57,11 +93,15 @@ everything that these commands generate, except the committed reports.
   follow: rows dated before the anchor day are kept, and a `STOP` on or after the anchor is
   blanked. `docs/decisions.md` shows how these rules were checked against the test files.
 * The pipeline stops with an error if any table still holds a date on or after the anchor.
+* A `STOP` dated before its own `START` (58 medication rows) is omitted after the cut; the start
+  is kept (`docs/decisions.md`, D31). The prediction loader rejects event files built without
+  this rule.
 * Columns that summarise the whole record (death date, lifetime costs, medication dispense
   totals, marital status, device UDI) are never read.
-* Labels come from the full timeline, but only after the history has been cut, and only for
-  train and val patients.
-* Model choices use cross-validation on train. Val is scored once, at the end.
+* Labels come from full condition records for train and val patients. Prediction inputs come
+  from truncated histories. The transformer plan keeps labels outside prediction interfaces.
+* New model choices use cross-validation on train. The baseline has already been evaluated on
+  val. The transformer plan freezes all choices before one recorded val evaluation bundle.
 
 ## Results so far (val, 365 patients)
 

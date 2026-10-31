@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from ehrforecast.events import EVENT_COLUMNS, build_code_descriptions, build_events
 from tests.helpers import ts
@@ -101,3 +102,10 @@ def test_imaging_code_combines_modality_and_body_site() -> None:
     assert (
         desc.loc[("imaging_studies", "DX|40983000"), "description"] == "Digital Radiography | Arm"
     )
+
+
+def test_stop_before_start_must_be_repaired_before_event_construction() -> None:
+    tables = _tables()
+    tables["conditions"].loc[0, "STOP"] = pd.Timestamp("2009-12-01")
+    with pytest.raises(ValueError, match="omit_invalid_stops"):
+        build_events(tables)

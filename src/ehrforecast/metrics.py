@@ -1,7 +1,7 @@
-"""Multi-label evaluation: macro AUROC, mean average precision, and bootstrap intervals.
+"""Legacy step-2 metrics, retained only for historical reproduction.
 
-A target is skipped (``NaN``) in a sample where it has only one class, because AUROC and AP are
-undefined there. Macro averages then use the remaining targets.
+This version skips both metrics when a sample has one class. That AP convention is not the
+reference-library convention. New experiments use ``evaluation.py`` and its version-2 rules.
 """
 
 from __future__ import annotations

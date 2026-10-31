@@ -1,9 +1,9 @@
 {
-  "n_events": 1431561,
+  "n_events": 1431503,
   "n_events_by_source": {
     "encounters": 180353,
     "conditions": 31531,
-    "medications": 530422,
+    "medications": 530364,
     "careplans": 12879,
     "allergies": 732,
     "devices": 259,
@@ -78,6 +78,17 @@
       "careplans": 0.667,
       "allergies": 0.9419,
       "devices": 1.0
+    }
+  },
+  "omitted_stops": {
+    "rule": "omit-stop-before-start-v1",
+    "by_split": {
+      "train": 49,
+      "val": 3,
+      "test": 6
+    },
+    "by_source": {
+      "medications": 58
     }
   },
   "label_positives_total": 5899,

@@ -110,3 +110,53 @@ intervals do not show whether one model is better.
 **Implementation note.** The bootstraps call AUROC and AP about one million times per run. The
 sklearn functions spend most of that time on input validation, so `metrics.py` has exact
 rank-based versions. Unit tests check that they equal the sklearn values, ties included.
+
+## D31. Interval stops recorded before their own start
+
+D9–D30 are reserved for the planned decisions in `docs/model_plan.md`. This implementation
+decision therefore uses the next free number. Derek approved it on 31 October 2026.
+
+**Decision.** When an interval row has a `STOP` earlier than its own `START`, keep the recorded
+start and omit the stop. Apply the rule after the anchor cut and before event construction, to
+every split, including the released test files. The raw files stay unchanged. Encounters are
+excluded: their ends define the anchors, so an invalid encounter stop stops the pipeline.
+
+**Evidence.** The P3a raw-data audit found 57 training medication rows (27 patients) with a stop
+2 to 6 days before the start. These are not same-day rounding errors. The anchor cut removes 8 of
+these rows. After the cut, 49 training, 3 val, and 6 test rows (22, 1, and 3 patients) remain.
+No other interval table has such a row in any split. In the typical case, the invalid row is a
+second prescription of the same drug, from the same encounter, inside a valid prescription.
+
+**Reason.** The start is a real prescription event; only its stop date is impossible. Each stop
+is linked to its start only through its own row. Other prescriptions of the same patient and drug
+cannot identify the correct stop: 1,579 train/val rows share a patient and code with an invalid
+row. Removing all stops for that patient and code would delete valid stops. The rule reads only
+the row's own pre-anchor dates, so later records cannot change a prediction history.
+
+**Effect.** The rebuilt `events.parquet` has 58 fewer medication `stop` rows (1,431,561 to
+1,431,503). All other step-1 outputs are byte-identical. The baseline features count only
+`start` and `point` events, so the step-2 baseline is unchanged. P3a reproduces its training-CV
+scores within 1e-12. `reports/dataset/omitted_stops.csv` lists every omitted stop.
+
+**Implementation note.** `truncation.omit_invalid_stops` applies the rule. `build_events` rejects
+a remaining invalid stop, so no caller can skip the repair. `events.manifest.json` records the
+rule version (`omit-stop-before-start-v1`) and the event-file hash. The prediction loader rejects
+an event table without a matching manifest, for example one built before this rule.
+
+## D32. Refill compression links each stop to its own start
+
+**Decision.** Merge a medication stop with a later start of the same drug when the start is at
+most one day after the stop and is not the stop's own start. Remove both events, so the treatment
+span continues. Each start merges at most once. The event table stores `interval_start`, the
+`START` of the source row, on both start and stop events. It is the link to the own start.
+
+**Evidence.** M1 on fold-0 fit patients: 160,150 stops are followed by a restart at exactly the
+same timestamp. No restart falls more than 0 and at most 2 days after a stop. 14 fall 2 to 7 days
+after, and 585 later. The one-day threshold therefore merges only exact refills. The raw training
+medications contain 39,274 zero-length prescriptions (stop equal to start). Without the link, the
+stop of a repeated zero-length prescription would merge with its own start and delete it.
+
+**Effect.** Event schema `events-v2` and input schema `prediction-inputs-v3`. Row count and
+history rule are unchanged. Compression runs inside the fold tokenizer, after the anchor cut, so
+a restart after the anchor cannot remove a visible stop. E14 can still compare compression on
+and off, because `events.parquet` itself stays uncompressed.

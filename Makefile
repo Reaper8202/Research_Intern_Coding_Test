@@ -7,7 +7,15 @@ MODELS_DIR ?= models
 REPORTS_DIR ?= reports
 LOGS_DIR ?= logs
 
-.PHONY: setup lint format typecheck test check dataset baseline clean
+# Transformer settings: override on the command line, e.g. `make finetune FOLD=2 METHOD=H`.
+CONFIG ?= configs/transformer.toml
+FOLD ?= 0
+METHOD ?= F
+RESUME ?=
+RESUME_FLAG = $(if $(RESUME),--resume,)
+
+.PHONY: setup lint format typecheck test check dataset baseline folds preflight \
+	tokenize pipeline-smoke pretrain finetune clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -47,6 +55,39 @@ baseline:
 		--models $(MODELS_DIR)/baseline \
 		--reports $(REPORTS_DIR)/baseline \
 		--log-file $(LOGS_DIR)/train_baseline.log
+
+# Step 3a: persist train-only folds, then audit data and reproduce one baseline configuration.
+folds:
+	$(PYTHON) -m ehrforecast.folds --dataset $(PROCESSED_DIR) --log-file $(LOGS_DIR)/folds.log
+
+preflight:
+	$(PYTHON) -m ehrforecast.preflight \
+		--raw $(RAW_DIR) --dataset $(PROCESSED_DIR) --reports $(REPORTS_DIR) \
+		--config configs/p3a.toml --log-file $(LOGS_DIR)/preflight.log
+
+# Steps 3b-3c: fold tokenizers, patient histories, and retention reports (all five folds).
+tokenize:
+	$(PYTHON) -m ehrforecast.representation \
+		--dataset $(PROCESSED_DIR) --config $(CONFIG) --models $(MODELS_DIR)/transformer \
+		--reports $(REPORTS_DIR)/representation --log-file $(LOGS_DIR)/tokenize.log
+
+# G2 execution check on fold 0 with tiny settings and temporary outputs (not a result).
+pipeline-smoke:
+	$(PYTHON) -m ehrforecast.smoke \
+		--dataset $(PROCESSED_DIR) --config configs/smoke.toml --work $(MODELS_DIR)/smoke \
+		--report $(REPORTS_DIR)/transformer/pipeline_smoke.json --log-file $(LOGS_DIR)/pipeline_smoke.log
+
+# Step 4: self-pretraining and supervised methods for one fold. Add RESUME=1 to continue.
+pretrain:
+	$(PYTHON) -m ehrforecast.pretrain \
+		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
+		--fold $(FOLD) $(RESUME_FLAG) --log-file $(LOGS_DIR)/pretrain_fold$(FOLD).log
+
+finetune:
+	$(PYTHON) -m ehrforecast.finetune \
+		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
+		--fold $(FOLD) --method $(METHOD) $(RESUME_FLAG) \
+		--log-file $(LOGS_DIR)/finetune_fold$(FOLD)_$(METHOD).log
 
 # Remove generated data, models, and logs (keeps data/raw and the committed reports).
 clean:

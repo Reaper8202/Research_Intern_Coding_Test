@@ -13,27 +13,51 @@ code       clinical code; imaging uses ``<modality>|<body site>``
 value_num  numeric observation value; encounter length in hours for encounters
 value_text text observation value; encounter class for encounters
 unit       observation unit
+interval_start  ``START`` of the source row for interval tables (start and stop rows); empty
+           for point events. It links a stop to its own start for refill compression.
 ========== ===============================================================================
 
 Interval tables (conditions, medications, care plans, allergies, devices) give a ``start`` row,
 and a ``stop`` row when the ``STOP`` is known at the anchor. Encounters give one ``start`` row
-with their length, because an encounter end carries no separate clinical meaning.
+with their length, because an encounter end carries no separate clinical meaning. A ``STOP``
+before its own ``START`` must be removed first (``truncation.omit_invalid_stops``).
+
+``events.manifest.json`` records the history rule version and the event file hash. Loaders use
+it to reject an event table from an older build.
 """
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from ehrforecast.provenance import file_hash, write_json
 from ehrforecast.schema import EVENT_TABLES, PATIENT_COL, TableSpec
+from ehrforecast.truncation import HISTORY_RULE_VERSION
 
 log = logging.getLogger(__name__)
 
-EVENT_COLUMNS = ("patient_id", "time", "source", "kind", "code", "value_num", "value_text", "unit")
+EVENT_COLUMNS = (
+    "patient_id",
+    "time",
+    "source",
+    "kind",
+    "code",
+    "value_num",
+    "value_text",
+    "unit",
+    "interval_start",
+)
+# v2 adds ``interval_start``.
+EVENT_SCHEMA_VERSION = "events-v2"
 SOURCE_ORDER = tuple(EVENT_TABLES)
 KIND_ORDER = ("start", "point", "stop")
+EVENTS_FILE = "events.parquet"
+EVENTS_MANIFEST = "events.manifest.json"
 
 
 def _codes(df: pd.DataFrame, spec: TableSpec) -> pd.Series:
@@ -76,11 +100,14 @@ def table_to_events(df: pd.DataFrame, spec: TableSpec) -> pd.DataFrame:
             "value_num": value_num,
             "value_text": value_text,
             "unit": unit,
+            "interval_start": df[spec.time_col] if spec.is_interval else pd.NaT,
         }
     )
     frames = [starts]
     if spec.stop_col is not None and spec.name != "encounters":
         has_stop = df[spec.stop_col].notna()
+        if (df.loc[has_stop, spec.stop_col] < df.loc[has_stop, spec.time_col]).any():
+            raise ValueError(f"{spec.name}: a STOP precedes its START; apply omit_invalid_stops")
         stops = starts.loc[has_stop].copy()
         stops["time"] = df.loc[has_stop, spec.stop_col]
         stops["kind"] = "stop"
@@ -105,6 +132,34 @@ def build_events(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
         ["patient_id", "time", "source", "kind", "code"], kind="stable"
     ).reset_index(drop=True)
     return events[list(EVENT_COLUMNS)]
+
+
+def save_events(events: pd.DataFrame, out_dir: Path, omitted_stops: dict[str, int]) -> None:
+    """Write the event table and the manifest that ties it to the current history rule."""
+    path = out_dir / EVENTS_FILE
+    events.to_parquet(path, index=False)
+    manifest = {
+        "history_rule": HISTORY_RULE_VERSION,
+        "event_schema": EVENT_SCHEMA_VERSION,
+        "n_events": len(events),
+        "omitted_stops_by_split": omitted_stops,
+        "events_sha256": file_hash(path),
+    }
+    write_json(out_dir / EVENTS_MANIFEST, manifest)
+
+
+def verify_events(dataset_dir: Path) -> None:
+    """Reject an event table that predates the current history rule or changed after its build."""
+    path, manifest_path = dataset_dir / EVENTS_FILE, dataset_dir / EVENTS_MANIFEST
+    if not path.is_file() or not manifest_path.is_file():
+        raise ValueError("event table or event manifest is missing; run `make dataset`")
+    manifest = json.loads(manifest_path.read_text())
+    if manifest.get("history_rule") != HISTORY_RULE_VERSION:
+        raise ValueError("event table uses an older history rule; run `make dataset`")
+    if manifest.get("event_schema") != EVENT_SCHEMA_VERSION:
+        raise ValueError("event table uses an older column schema; run `make dataset`")
+    if manifest.get("events_sha256") != file_hash(path):
+        raise ValueError("event table does not match its manifest; run `make dataset`")
 
 
 def build_code_descriptions(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
