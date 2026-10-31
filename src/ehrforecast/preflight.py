@@ -277,6 +277,15 @@ def run(
     config = tomllib.loads(config_path.read_text())
     if config["units"]["policy"] != UNIT_RULE_VERSION:
         raise ValueError("unsupported unit policy")
+    # Read git state before this run rewrites its own tracked report files.
+    git_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=project_root, text=True
+    ).strip()
+    git_dirty = bool(
+        subprocess.check_output(
+            ["git", "status", "--porcelain", "--untracked-files=no"], cwd=project_root, text=True
+        ).strip()
+    )
     phase_dir = reports_dir / "p3a"
     phase_dir.mkdir(parents=True, exist_ok=True)
     started = datetime.now(UTC).isoformat()
@@ -355,16 +364,8 @@ def run(
                 for name in ("numpy", "pandas", "scipy", "scikit-learn", "pyarrow")
             },
             "python": platform.python_version(),
-            "git_commit_at_run": subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=project_root, text=True
-            ).strip(),
-            "git_worktree_dirty": bool(
-                subprocess.check_output(
-                    ["git", "status", "--porcelain", "--untracked-files=no"],
-                    cwd=project_root,
-                    text=True,
-                ).strip()
-            ),
+            "git_commit_at_run": git_commit,
+            "git_worktree_dirty": git_dirty,
             "dirty_scope_note": (
                 "Tracked files only. code_sha256 covers every source file, tracked or not."
             ),
