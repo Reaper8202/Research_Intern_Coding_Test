@@ -100,10 +100,12 @@ finetune:
 		--log-file $(LOGS_DIR)/finetune_fold$(FOLD)_$(METHOD).log
 
 # Step 4: training-CV results and the section 5.3 method selection (no official val).
+# Add REFERENCE=configs/transformer.toml to compare a config (e.g. multimodal) with small-v1.
 cv-summary:
 	$(PYTHON) -m ehrforecast.cv_summary \
 		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
-		--reports $(REPORTS_DIR)/transformer --log-file $(LOGS_DIR)/cv_summary.log
+		--reports $(REPORTS_DIR)/transformer $(if $(REFERENCE),--reference-config $(REFERENCE),) \
+		--log-file $(LOGS_DIR)/cv_summary.log
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
 wandb-sync:

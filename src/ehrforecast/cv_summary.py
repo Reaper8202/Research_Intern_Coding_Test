@@ -7,6 +7,10 @@ Reads each fold's ``pretrain/run.json`` and ``<method>/`` outputs. Writes, to
 * ``oof_per_target.csv``: pooled out-of-fold per-target metrics per method.
 * ``cv_summary.json``: mean fold metrics, pooled out-of-fold metrics, paired patient BCa
   differences, and the method selection (only when all five folds are complete).
+* With ``--reference-config`` (for example the CSV-only ``small-v1`` against the multimodal
+  ``small-v1-mm``, D34): per-fold differences, paired BCa differences per method, and the same
+  comparison restricted to patients with a modality input (a genotype file or a scan before the
+  anchor day). ``reference_comparison.csv`` holds the per-fold differences.
 
 All numbers are training-CV development evidence. Official val is not read.
 
@@ -30,8 +34,9 @@ from ehrforecast.contracts import load_training_data
 from ehrforecast.evaluation import bootstrap_comparison, evaluate_predictions
 from ehrforecast.folds import N_FOLDS, fold_patients, load_folds
 from ehrforecast.logging_utils import setup_logging
+from ehrforecast.modalities import Modalities
 from ehrforecast.provenance import write_json
-from ehrforecast.training import fold_dir, load_config
+from ehrforecast.training import config_modalities, fold_dir, load_config
 
 log = logging.getLogger("ehrforecast.cv_summary")
 
@@ -155,8 +160,91 @@ def select_method(table: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def modality_patients(modalities: Modalities, cohort: pd.DataFrame) -> pd.Index:
+    """Patients with a genotype file or a scan before their anchor day (D34 date rule)."""
+    genotype = set(modalities.genomics["patient_id"].astype(str))
+    anchor_day = cohort["anchor_date"].dt.normalize()
+    scans = modalities.study_dates.reindex(cohort.index)
+    prescan = set(cohort.index[scans.lt(anchor_day).to_numpy()])
+    return pd.Index([p for p in cohort.index if p in genotype or p in prescan])
+
+
+def fold_differences(table: pd.DataFrame, reference: pd.DataFrame) -> pd.DataFrame:
+    """Per-fold metric differences (this config minus the reference) for shared methods."""
+    keys = ["fold", "method"]
+    joined = table[[*keys, "macro_auroc", "mAP"]].merge(
+        reference[[*keys, "macro_auroc", "mAP"]], on=keys, suffixes=("", "_reference")
+    )
+    joined["macro_auroc_difference"] = joined["macro_auroc"] - joined["macro_auroc_reference"]
+    joined["mAP_difference"] = joined["mAP"] - joined["mAP_reference"]
+    return joined.sort_values(keys).reset_index(drop=True)
+
+
+def reference_comparison(
+    dataset_dir: Path,
+    models_dir: Path,
+    config: dict[str, Any],
+    reference: dict[str, Any],
+    table: pd.DataFrame,
+    n_boot: int,
+) -> tuple[dict[str, Any], pd.DataFrame]:
+    data = load_training_data(dataset_dir)
+    labels, prior, codes = data.labels, data.inputs.prior, data.inputs.codes
+    assignments = load_folds(dataset_dir)
+    reference_table = fold_table(models_dir, reference, list(range(N_FOLDS)))
+    differences = fold_differences(table, reference_table)
+    modalities = config_modalities(dataset_dir, config)
+    subgroup = modality_patients(modalities, data.inputs.cohort) if modalities is not None else None
+    out: dict[str, Any] = {
+        "reference_config": reference["name"],
+        "mean_fold_differences": {
+            str(m): {
+                "macro_auroc": float(g["macro_auroc_difference"].mean()),
+                "mAP": float(g["mAP_difference"].mean()),
+                "folds_with_higher_auroc": int((g["macro_auroc_difference"] > 0).sum()),
+                "folds": len(g),
+            }
+            for m, g in differences.groupby("method")
+        },
+        "modality_subgroup_patients": None if subgroup is None else len(subgroup),
+        "paired_bca_oof": {},
+        "modality_subgroup": {},
+    }
+    for method, g in differences.groupby("method"):
+        if len(g) != N_FOLDS:
+            continue
+        ours = out_of_fold(models_dir, config, str(method), assignments).loc[labels.index]
+        theirs = out_of_fold(models_dir, reference, str(method), assignments).loc[labels.index]
+        name = f"{method}_minus_{reference['name']}_{method}"
+        out["paired_bca_oof"][name] = bootstrap_comparison(
+            labels, ours, codes, other=theirs, prior=prior, n_boot=n_boot
+        )
+        if subgroup is not None:
+            rows = labels.index.intersection(subgroup)
+            sub: dict[str, Any] = {"patients": len(rows)}
+            for label, probabilities in (("this", ours), ("reference", theirs)):
+                sub[label] = evaluate_predictions(
+                    labels.loc[rows], probabilities.loc[rows], codes, prior=prior.loc[rows]
+                ).summary
+            sub["paired_bca"] = bootstrap_comparison(
+                labels.loc[rows],
+                ours.loc[rows],
+                codes,
+                other=theirs.loc[rows],
+                prior=prior.loc[rows],
+                n_boot=n_boot,
+            )
+            out["modality_subgroup"][name] = sub
+    return out, differences
+
+
 def run(
-    dataset_dir: Path, config_path: Path, models_dir: Path, reports_dir: Path, n_boot: int
+    dataset_dir: Path,
+    config_path: Path,
+    models_dir: Path,
+    reports_dir: Path,
+    n_boot: int,
+    reference_path: Path | None = None,
 ) -> dict[str, Any]:
     config = load_config(config_path)
     out_dir = reports_dir / str(config["name"])
@@ -213,6 +301,12 @@ def run(
             "logreg_historical is the step-2 code-count configuration (C=0.003) reproduced in "
             "P3a, scored with the common mask. The revised at-risk baselines run in P4c."
         )
+    if reference_path is not None:
+        comparison, differences = reference_comparison(
+            dataset_dir, models_dir, config, load_config(reference_path), table, n_boot
+        )
+        summary["reference_comparison"] = comparison
+        differences.to_csv(out_dir / "reference_comparison.csv", index=False)
     write_json(out_dir / "cv_summary.json", summary)
     return summary
 
@@ -224,10 +318,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--models", type=Path, required=True)
     parser.add_argument("--reports", type=Path, required=True)
     parser.add_argument("--n-boot", type=int, default=1000)
+    parser.add_argument("--reference-config", type=Path, default=None)
     parser.add_argument("--log-file", type=Path, default=None)
     args = parser.parse_args(argv)
     setup_logging(args.log_file)
-    summary = run(args.dataset, args.config, args.models, args.reports, args.n_boot)
+    summary = run(
+        args.dataset,
+        args.config,
+        args.models,
+        args.reports,
+        args.n_boot,
+        args.reference_config,
+    )
     log.info(
         "Selection: %s", summary["selection"].get("selected_method", summary["selection"]["status"])
     )

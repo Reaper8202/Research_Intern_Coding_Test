@@ -48,3 +48,33 @@ def test_small_gain_keeps_the_reference_and_close_methods_prefer_fewer_parameter
     assert decision["selected_method"] == "H"
     h_far = ([0.69] * 5, [0.20] * 5)
     assert select_method(_table({"S": s, "H": h_far, "F": f}))["selected_method"] == "S"
+
+
+def test_fold_differences_subtract_the_reference_per_fold_and_method() -> None:
+    from ehrforecast.cv_summary import fold_differences
+
+    ours = _table({"F": ([0.75, 0.76, 0.74, 0.75, 0.77], [0.20] * 5)})
+    reference = _table({"F": ([0.74] * 5, [0.21] * 5), "S": ([0.70] * 5, [0.2] * 5)})
+    out = fold_differences(ours, reference)
+    assert out["method"].unique().tolist() == ["F"]
+    assert out["macro_auroc_difference"].round(4).tolist() == [0.01, 0.02, 0.0, 0.01, 0.03]
+    assert out["mAP_difference"].round(4).tolist() == [-0.01] * 5
+
+
+def test_modality_subgroup_uses_genotype_files_and_prescans_only() -> None:
+    import numpy as np
+
+    from ehrforecast.cv_summary import modality_patients
+    from ehrforecast.modalities import Modalities
+
+    cohort = pd.DataFrame(
+        {"anchor_date": pd.to_datetime(["2015-01-01 10:00"] * 4)},
+        index=pd.Index(["a", "b", "c", "d"], name="patient_id"),
+    )
+    genomics = pd.DataFrame({"patient_id": ["a"], "site": ["rs1"], "count": [0]})
+    scans = pd.Series(
+        pd.to_datetime(["2014-12-31", "2015-01-01", "2016-01-01"]), index=["b", "c", "d"]
+    )
+    modalities = Modalities(genomics, scans, np.zeros((3, 2, 2, 2), "float16"), 2, "x")
+    # a: genotype file; b: scan the day before the anchor; c: scan on the anchor day; d: later.
+    assert modality_patients(modalities, cohort).tolist() == ["a", "b"]

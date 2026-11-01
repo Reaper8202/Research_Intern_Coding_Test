@@ -4,14 +4,15 @@ Predicts which of 40 conditions a patient will be diagnosed with for the first t
 years after a landmark ("anchor") date, using only the synthetic EHR events recorded before that
 date. Data: the Synthea Coherent dataset as released for the research intern coding test.
 
-Status: steps 1 and 2 (leak-free dataset, baselines) are done. Step 3 (folds, data audits, fold
-tokenizers, and patient sequences) is done. The transformer training code is done and passed a
-tiny end-to-end check on training data. Full transformer training comes next. See
-[the project plan](docs/plan.md) and [model plan version 2.3](docs/model_plan.md).
+Status: steps 1 to 3 are done. The CSV-only transformer (`small-v1`) is trained on all five
+training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
+multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
+MRI token from a 3-D CNN. See [the project plan](docs/plan.md) and
+[model plan version 2.3](docs/model_plan.md).
 
-The planned final model is a transformer trained from random weights on the supplied training
-data. Any self-pretraining uses only training histories before their anchors. External datasets
-and pretrained weights are excluded. Logistic regression and LightGBM are comparison methods.
+The final model is a transformer trained from random weights on the supplied training data. Any
+self-pretraining uses only training histories before their anchors. External datasets and
+pretrained weights are excluded. Logistic regression and LightGBM are comparison methods.
 
 The assessment demonstrates a correct, leak-free, reproducible training pipeline. The plan starts
 with a small transformer and a complete run through training, checkpoint recovery, reload, and
@@ -80,6 +81,22 @@ make cv-summary                   # after all five folds: fold table, pooled met
 make wandb-sync                   # upload finished offline runs to wandb
 ```
 
+Multimodal model (D34). Build the modality cache once, then use the multimodal config:
+
+```bash
+make modalities                   # genotype files and DICOM volumes -> data/processed (20 s)
+make tokenize CONFIG=configs/multimodal.toml
+make pretrain CONFIG=configs/multimodal.toml FOLD=0
+make finetune CONFIG=configs/multimodal.toml FOLD=0 METHOD=F
+make cv-summary CONFIG=configs/multimodal.toml REFERENCE=configs/transformer.toml
+make pipeline-smoke SMOKE_CONFIG=configs/smoke_mm.toml
+```
+
+Genotypes enter as `[DNA] dna:<site>:<variant alleles>` tokens. A scan enters as one `[IMG]`
+token only when its study date is before the anchor day. Coverage is small: genomics for 396
+train and 2 test patients, and pre-anchor scans for 200 train and 28 test patients
+(`reports/dataset/modalities.json`).
+
 Each run writes `models/transformer/<config>/fold<k>/<run>/` with `best.pt`, `last.pt`,
 `metrics.jsonl`, and `run.json`. wandb logs offline. `make wandb-sync` uploads finished runs to
 the team `derek-wu820-university-of-toronto`, project `ehr-forecast`; set `WANDB_ENTITY` to use
@@ -141,3 +158,22 @@ review: `docs/baseline_results.md`.
 | `metrics.py` | AUROC, AP, BCa bootstrap intervals, paired model comparison |
 | `train_baseline.py` | step 2 command |
 | `logging_utils.py` | console and file logging for the commands |
+| `contracts.py` | explicit model inputs; training-only label loading |
+| `folds.py` | saved five-fold assignments of the training split |
+| `masking.py` | prior-condition mask aligned by patient and target |
+| `evaluation.py` | version-2 AUROC, AP, Brier score, and patient BCa intervals |
+| `numeric.py` | unit audit and quantile bins for numeric observations |
+| `provenance.py` | hashes, file checks, and atomic JSON output |
+| `preflight.py` | P3a data audit and baseline reproduction |
+| `modalities.py` | genotype and DICOM cache for the multimodal model (D34) |
+| `tokenizer.py` | fold tokenizer fitted on fit patients only |
+| `sequences.py` | patient histories, prediction sequences, pretraining windows |
+| `representation.py` | `make tokenize` command and retention reports |
+| `model.py` | decoder-only transformer and the 3-D CNN image encoder |
+| `training.py` | configs, fold loading, batching, losses, checkpoints, logging |
+| `pretrain.py` | self-pretraining (next-event prediction) |
+| `finetune.py` | supervised methods S, H, and F |
+| `predict.py` | label-free prediction from saved fold models |
+| `smoke.py` | G2 end-to-end execution check |
+| `cv_summary.py` | five-fold results, method selection, config comparison |
+| `wandb_sync.py` | upload finished offline wandb runs |
