@@ -49,21 +49,6 @@ id = "E0-seed3"
 config = "configs/experiments/mm_seed3.toml"
 folds = [0, 1, 2, 3, 4]
 
-[[experiment]]
-id = "P1-pretrain60"
-config = "configs/experiments/mm_pretrain60.toml"
-folds = [0, 1, 2, 3, 4]
-
-[[experiment]]
-id = "E5-ctx512"
-config = "configs/experiments/mm_ctx512.toml"
-folds = [0]  # the plan's fold-0 screen; five folds only if it passes on fold 0
-
-[[experiment]]
-id = "E5-ctx2048"
-config = "configs/experiments/mm_ctx2048.toml"
-folds = [0, 1, 2, 3, 4]
-
 # ---------------------------------------------------------------------------------------------
 # Section 5.4 recovery round, added on 1 November 2026 at 15:35, before any score of R1 or R2.
 # Evidence: LightGBM counts beats multimodal F by 0.023 AUROC (pooled paired BCa [-0.032,
@@ -81,3 +66,22 @@ folds = [0, 1, 2, 3, 4]
 id = "R2-age-sex-head-dropout"
 config = "configs/experiments/mm_agesex_dropout03.toml"
 folds = [0, 1, 2, 3, 4]
+
+# Revision on 1 November 2026 at 18:10, approved by Derek to save time, before any score of R1,
+# R2, P1, or E5: the recovery round runs right after E0-seed3, and E5-ctx2048 becomes a fold-0
+# screen (five folds only if it passes on fold 0), like E5-ctx512.
+
+[[experiment]]
+id = "P1-pretrain60"
+config = "configs/experiments/mm_pretrain60.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "E5-ctx512"
+config = "configs/experiments/mm_ctx512.toml"
+folds = [0]  # the plan's fold-0 screen; five folds only if it passes on fold 0
+
+[[experiment]]
+id = "E5-ctx2048"
+config = "configs/experiments/mm_ctx2048.toml"
+folds = [0]  # fold-0 screen since the 18:10 revision; five folds only if it passes on fold 0
