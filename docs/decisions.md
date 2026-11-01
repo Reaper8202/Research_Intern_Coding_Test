@@ -215,6 +215,16 @@ the correlation of 32-cubed block means between patients is 0.995 to 0.999.
 **Expected effect.** Small. Genomics reaches 2 of 358 test patients, and the images vary little.
 The comparison with `small-v1` is reported for all patients and for patients with a modality.
 
+**Result (training CV, 1 November 2026).** Section 5.3 again selected F within `small-v1-mm`
+(AUROC gain over S +0.008, 4 of 5 folds). Multimodal F minus CSV-only F, pooled out of fold,
+paired patient BCa 95%: AUROC +0.0005 [-0.006, +0.007], mAP +0.009 [-0.000, +0.017]. On the 541
+training patients with a genotype file or a pre-anchor scan, the only patients whose inputs
+changed: AUROC -0.003 [-0.020, +0.015], mAP -0.013 [-0.053, +0.020]. The modalities therefore
+show no measurable benefit. The small all-patient mAP difference does not appear where the inputs
+differ, so it is most likely training variation (a different vocabulary and random
+initialization); seed variation was not measured. The multimodal model is submitted by Derek's
+decision. `reports/transformer/small-v1-mm/` holds the full comparison.
+
 **Verification.** `tests/test_modalities.py`: genotype counting, DICOM resampling, a truncated
 file, cache hashes, fit-only genotype vocabulary, the anchor-day and window rules (a mutation of
 `<` to `<=` fails a test), the context budget, and image-to-row routing in the model. A CSV-only

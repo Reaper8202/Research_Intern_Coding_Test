@@ -119,6 +119,15 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   setting and stayed fixed for all folds.
 * Fold-4 pretraining failed four times because swap filled the disk. D33 records the cause and
   the fix (release cached MPS memory after each step). The failed attempts were not used.
+* Derek required a multimodal model (D34) and chose to submit it. `small-v1-mm` adds genotype
+  tokens and a brain MRI token (3-D CNN) to `small-v1`. All 20 runs completed; section 5.3 again
+  selected F. Mean fold AUROC / mAP: F 0.759 / 0.197, S 0.752 / 0.170, H 0.740 / 0.162.
+  Against CSV-only F (paired BCa, pooled out of fold): AUROC +0.0005 [-0.006, +0.007], mAP +0.009
+  [-0.000, +0.017]. On the 541 patients with a modality input: AUROC -0.003 [-0.020, +0.015].
+  The modalities show no measurable benefit (D34). Against the step-2 logistic regression:
+  AUROC +0.017 [+0.007, +0.027], mAP +0.005 [-0.007, +0.016].
+* Next: P4e. Freeze the multimodal F bundle, score official val once, and write the test
+  predictions from the five fold models.
 
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the
