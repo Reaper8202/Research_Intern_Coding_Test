@@ -121,6 +121,11 @@ def run(
     dataset_dir: Path, config_path: Path, models_dir: Path, reports_dir: Path, folds: list[int]
 ) -> list[dict[str, Any]]:
     config = load_config(config_path)
+    if "representation_from" in config:
+        raise ValueError(
+            f"{config_path} reuses the tokenizers of {config['representation_from']}; "
+            "tokenize that configuration instead"
+        )
     rep, sequence = config["representation"], sequence_config(config)
     data = load_training_data(dataset_dir)
     events, cohort, codes = data.inputs.events, data.inputs.cohort, data.inputs.codes

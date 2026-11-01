@@ -51,6 +51,7 @@ from ehrforecast.training import (
     load_fold,
     micro_batches,
     param_groups,
+    pretrain_dir,
     release_cached_memory,
     rng_state,
     run_record,
@@ -380,7 +381,8 @@ def main(argv: list[str] | None = None) -> None:
     config = load_config(args.config)
     fold = load_fold(args.dataset, args.models, config, args.fold)
     directory = fold_dir(args.models, config, args.fold)
-    parent = None if args.method == "S" else directory / args.parent / "best.pt"
+    parent_dir = pretrain_dir(args.models, config, args.fold)
+    parent = None if args.method == "S" else parent_dir / args.parent / "best.pt"
     result = run_finetuning(
         config,
         fold,

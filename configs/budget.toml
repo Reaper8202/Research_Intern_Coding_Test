@@ -1,0 +1,65 @@
+# Tuning round before official val (model plan revision 2.4).
+# Approved by Derek on 1 November 2026 and written before any score of these experiments existed.
+# The list order is the run order. `python -m ehrforecast.experiments` runs it and can resume.
+#
+# Evidence that motivated the round (incumbent small-v1-mm, method F, all five folds):
+# * fine-tuning overfits: train AUROC 0.84-0.90 against held-out 0.75-0.77 at the best epoch;
+# * pretraining hit its 30-epoch limit on every fold while still improving;
+# * each configuration ran with one seed, so the seed-to-seed spread is unknown.
+#
+# Decision rule (section 5.3): a variant replaces the incumbent only with a mean macro AUROC gain
+# of at least 0.005, a higher AUROC on at least 4 of 5 folds, and a mean mAP loss of at most
+# 0.005, all against the incumbent's fold scores. The E0 seeds give the spread; with three
+# seeds, the rule is also checked against the per-fold seed mean. If two or more variants pass,
+# their combination uses the one reserved slot and needs its own five-fold run.
+# Official val is not read in this round.
+
+incumbent = "configs/multimodal.toml"
+method = "F"
+compute_ceiling_hours = 14
+combination_slots = 1
+
+[[experiment]]
+id = "T1-dropout"
+config = "configs/experiments/mm_dropout03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "T2-body-lr"
+config = "configs/experiments/mm_bodylr3e5.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "T3-weight-decay"
+config = "configs/experiments/mm_wd01.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "T4-regularized"
+config = "configs/experiments/mm_regularized.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "E0-seed2"
+config = "configs/experiments/mm_seed2.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "E0-seed3"
+config = "configs/experiments/mm_seed3.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "P1-pretrain60"
+config = "configs/experiments/mm_pretrain60.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "E5-ctx512"
+config = "configs/experiments/mm_ctx512.toml"
+folds = [0]  # the plan's fold-0 screen; five folds only if it passes on fold 0
+
+[[experiment]]
+id = "E5-ctx2048"
+config = "configs/experiments/mm_ctx2048.toml"
+folds = [0, 1, 2, 3, 4]

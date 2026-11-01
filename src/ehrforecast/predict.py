@@ -59,8 +59,13 @@ class FoldModel:
 
 def load_fold_model(run_dir: Path, checkpoint: str = "best.pt") -> FoldModel:
     """Load our own checkpoint and the tokenizer it was trained with; verify they match."""
-    tokenizer = FoldTokenizer.load(run_dir.parent / "tokenizer.json")
     state = torch.load(run_dir / checkpoint, map_location="cpu", weights_only=False)
+    config = state.get("config", {})
+    # run_dir is <models>/<config name>/fold<k>/<run>; a variant may reuse another tokenizer.
+    source = str(config.get("representation_from", run_dir.parent.parent.name))
+    tokenizer = FoldTokenizer.load(
+        run_dir.parents[2] / source / run_dir.parent.name / "tokenizer.json"
+    )
     if state.get("version") != CHECKPOINT_VERSION or not state.get("complete"):
         raise ValueError(f"{run_dir / checkpoint} is incomplete or has an unknown version")
     provenance = state["provenance"]
@@ -68,7 +73,6 @@ def load_fold_model(run_dir: Path, checkpoint: str = "best.pt") -> FoldModel:
         raise ValueError(f"{run_dir} is not a supervised run")
     if provenance["tokenizer_sha256"] != tokenizer.sha256:
         raise ValueError(f"{run_dir} was trained with a different tokenizer")
-    config = state["config"]
     model = EHRTransformer(
         model_config(config, tokenizer, int(state["model"]["classifier.bias"].shape[0])),
         torch.from_numpy(tokenizer.input_only_ids()),

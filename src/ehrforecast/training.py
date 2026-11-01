@@ -114,7 +114,24 @@ def release_cached_memory(device: torch.device) -> None:
 
 
 def fold_dir(models_dir: Path, config: dict[str, Any], fold: int) -> Path:
+    """Where this configuration's runs for one fold are written."""
     return models_dir / str(config["name"]) / f"fold{fold}"
+
+
+def representation_dir(models_dir: Path, config: dict[str, Any], fold: int) -> Path:
+    """Where the fold tokenizer and histories are read.
+
+    An experiment variant can set ``representation_from`` to another configuration's name and
+    reuse its tokenizers and histories. ``load_fold`` then checks that the tokenizer settings and
+    modalities agree, so only training and sampling settings (for example the context length,
+    which applies when a sample is built) can differ.
+    """
+    return models_dir / str(config.get("representation_from", config["name"])) / f"fold{fold}"
+
+
+def pretrain_dir(models_dir: Path, config: dict[str, Any], fold: int) -> Path:
+    """The self-pretraining run that H and F start from (``pretrain_from`` reuses another's)."""
+    return models_dir / str(config.get("pretrain_from", config["name"])) / f"fold{fold}"
 
 
 # ---------------------------------------------------------------------- fold data
@@ -139,10 +156,16 @@ def _capped(patients: pd.Index, cap: int) -> pd.Index:
 def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold: int) -> FoldData:
     data = load_training_data(dataset_dir)
     fit, held = fold_patients(load_folds(dataset_dir), fold)
-    directory = fold_dir(models_dir, config, fold)
+    directory = representation_dir(models_dir, config, fold)
     tokenizer = FoldTokenizer.load(directory / "tokenizer.json")
     if tokenizer.fit_patients_sha256 != object_hash(sorted(fit.tolist())):
         raise ValueError("tokenizer was fitted on different patients than this fold's fit set")
+    rep = config["representation"]
+    if (tokenizer.min_patients, tokenizer.refill_gap_days) != (
+        int(rep["min_patients"]),
+        float(rep["refill_gap_days"]),
+    ):
+        raise ValueError("the fold tokenizer and the configuration use different token rules")
     genomics, imaging, _ = modality_settings(config)
     if (tokenizer.genomics, tokenizer.imaging) != (genomics, imaging):
         raise ValueError("the fold tokenizer and the configuration use different modalities")

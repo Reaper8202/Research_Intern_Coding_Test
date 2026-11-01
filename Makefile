@@ -18,7 +18,8 @@ RESUME_FLAG = $(if $(RESUME),--resume,)
 WANDB_ENTITY ?= derek-wu820-university-of-toronto
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
-	modalities tokenize pipeline-smoke pretrain finetune cv-summary wandb-sync clean
+	modalities tokenize pipeline-smoke pretrain finetune cv-summary experiments \
+	experiments-summary wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -106,6 +107,17 @@ cv-summary:
 		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
 		--reports $(REPORTS_DIR)/transformer $(if $(REFERENCE),--reference-config $(REFERENCE),) \
 		--log-file $(LOGS_DIR)/cv_summary.log
+
+# Tuning round from configs/budget.toml (resumable), then the experiment register.
+experiments:
+	$(PYTHON) -m ehrforecast.experiments run --budget configs/budget.toml \
+		--dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
+		--logs $(LOGS_DIR)/experiments --log-file $(LOGS_DIR)/experiments.log
+
+experiments-summary:
+	$(PYTHON) -m ehrforecast.experiments summarize --budget configs/budget.toml \
+		--models $(MODELS_DIR)/transformer --reports $(REPORTS_DIR)/transformer \
+		--log-file $(LOGS_DIR)/experiments.log
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
 wandb-sync:
