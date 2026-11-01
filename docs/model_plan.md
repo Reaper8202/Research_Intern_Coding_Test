@@ -2,8 +2,8 @@
 
 | Item | Value |
 |---|---|
-| Version | 2.3, 31 October 2026 |
-| Status | Reviewed against the assessment's pipeline-first requirement. Version 2.2 makes a complete small-model pipeline the first milestone and limits further experiments (section 18). Version 2.3 adds the approved interval-stop rule D31 (P3a) and the refill link D32 (P3b). P3a to P3c and the training code are implemented; no full training run has started. |
+| Version | 2.4, 1 November 2026 |
+| Status | Reviewed against the assessment's pipeline-first requirement. Version 2.2 makes a complete small-model pipeline the first milestone and limits further experiments (section 18). Version 2.3 adds the approved interval-stop rule D31 (P3a) and the refill link D32 (P3b). Version 2.4 records the multimodal requirement (D34) and a larger tuning round before val (section 5.3 note). |
 | Primary deliverable | A transformer that estimates 40 five-year first-diagnosis probabilities. All weights originate in this project. |
 | Scope | Representation, training, model selection, and final validation. Step 5 covers test prediction and publishing. |
 | Assessment authority | `../../research_intern_coding_test/ReadMe.md` |
@@ -343,6 +343,8 @@ All searches start after the complete pipeline check in section 6.
 6. Confirm each proposed replacement across five folds before adopting it.
 
 Allow at most four additional complete configurations on fold 0, including the 512-token run.
+(Version 2.4: Derek approved a larger round, fixed in advance in `configs/budget.toml`. The
+adoption rule below still decides every replacement.)
 Allow at most two of these configurations to proceed to five-fold confirmation. Prioritize the
 2,048-token context check when feasible, then E18 if the value-bin check triggers it. Refill, gap,
 position, larger-model, and extra-anchor variants compete for the remaining slots. Record the
@@ -1220,6 +1222,7 @@ result with its date, reason, affected runs, and whether results were already kn
 | 2.1 | 31 October 2026. Added F12 (measured context loss) and made the 2,048 comparison in E5 required when memory allows. Added the P3a value-bin information check (third LightGBM feature set), conditional E18 (continuous value channel), R21, and two numeric-encoding sources. No implementation or val result informed these changes. After a README audit, specified wandb logging of the val-bundle curves and a public link, and added a README-question map to section 17. |
 | 2.2 | 31 October 2026. Made pipeline correctness and reproducibility the primary objective. Clinical usefulness is not an objective. Added G1–G4, input interfaces, full prediction-invariance checks, loss accounting, recovery, and clean-environment inference. Made 2 x 128 the default and bounded extensions. Deferred full baseline searches until after the first complete run. Kept S/H/F, strong baselines, five-fold evaluation, and the frozen val bundle. Clarified selection bias and metric edge cases. Preserved F12 and the value-bin diagnostic as priorities within the budget. No new model or val result informed this review. |
 | 2.3 | 31 October 2026. Added D31 after the P3a raw-data audit found 57 training medication rows with a stop before the start. Derek approved the rule: keep the start, omit the invalid stop. Event histories in every split use it; the historical baseline is unchanged. Added D32 (refill compression links each stop to its own start) after M1 found 39,274 zero-length prescriptions. No model or val result informed these changes. |
+| 2.4 | 1 November 2026. Derek required a multimodal model (D34: genomics tokens and a brain MRI token, `small-v1-mm`) and chose to submit it. Derek approved a tuning round larger than the section 5.3 trial limits, recorded before any of its scores in `configs/budget.toml` (commit 39e6b1c): four fine-tuning regularization variants and two E0 seeds on five folds, 60 pretraining epochs on five folds, the 512-token fold-0 screen, and 2,048 tokens on five folds, plus one combination slot. The section 5.3 adoption rule is unchanged. E11 LightGBM runs as specified in section 7.2. |
 
 ## 19. Sources
 

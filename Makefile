@@ -19,7 +19,7 @@ WANDB_ENTITY ?= derek-wu820-university-of-toronto
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
 	modalities tokenize pipeline-smoke pretrain finetune cv-summary experiments \
-	experiments-summary wandb-sync clean
+	experiments-summary lightgbm wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -107,6 +107,12 @@ cv-summary:
 		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
 		--reports $(REPORTS_DIR)/transformer $(if $(REFERENCE),--reference-config $(REFERENCE),) \
 		--log-file $(LOGS_DIR)/cv_summary.log
+
+# E11: LightGBM comparison baselines on the training folds (CPU; about an hour).
+lightgbm:
+	$(PYTHON) -m ehrforecast.lightgbm_cv --dataset $(PROCESSED_DIR) --models $(MODELS_DIR) \
+		--reports $(REPORTS_DIR)/lightgbm --compare-config configs/multimodal.toml \
+		--log-file $(LOGS_DIR)/lightgbm.log
 
 # Tuning round from configs/budget.toml (resumable), then the experiment register.
 experiments:

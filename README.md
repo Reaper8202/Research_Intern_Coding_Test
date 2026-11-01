@@ -57,6 +57,8 @@ make setup                                        # .venv with locked dependency
 ln -s /path/to/research_intern_coding_test data/raw
 ```
 
+On macOS, LightGBM needs the OpenMP runtime: `brew install libomp`.
+
 ## Run
 
 ```bash
