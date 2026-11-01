@@ -33,6 +33,7 @@ import argparse
 import itertools
 import logging
 import time
+import tomllib
 import warnings
 from pathlib import Path
 from typing import Any
@@ -42,14 +43,12 @@ import numpy as np
 import pandas as pd
 
 from ehrforecast.contracts import load_training_data
-from ehrforecast.cv_summary import out_of_fold
 from ehrforecast.evaluation import bootstrap_comparison, evaluate_predictions
 from ehrforecast.features import BagOfCodes
 from ehrforecast.folds import N_FOLDS, fold_patients, load_folds
 from ehrforecast.logging_utils import setup_logging
 from ehrforecast.numeric import assign_bins, fit_bin_edges, numeric_observations
 from ehrforecast.provenance import write_json
-from ehrforecast.training import load_config
 
 log = logging.getLogger("ehrforecast.lightgbm_cv")
 # LightGBM names numpy columns itself; scikit-learn then warns on every numpy prediction.
@@ -75,6 +74,31 @@ FIXED: dict[str, Any] = {
     "random_state": SEED,
     "verbose": -1,
 }
+
+
+# This module must not import PyTorch: PyTorch and LightGBM each link a ``libomp.dylib`` on macOS,
+# and two OpenMP runtimes in one process can crash. The transformer predictions are read directly.
+def transformer_oof(
+    models_dir: Path, config_path: Path, assignments: pd.DataFrame
+) -> tuple[str, pd.DataFrame]:
+    """Name and pooled held-out F probabilities of a transformer configuration."""
+    name = str(tomllib.loads(config_path.read_text())["name"])
+    parts = []
+    for fold in range(N_FOLDS):
+        path = (
+            models_dir
+            / "transformer"
+            / name
+            / f"fold{fold}"
+            / "F"
+            / "held_predictions_best.parquet"
+        )
+        _, held = fold_patients(assignments, fold)
+        frame = pd.read_parquet(path)
+        if set(frame.index) != set(held):
+            raise ValueError(f"{path} does not hold exactly fold {fold}'s held-out patients")
+        parts.append(frame)
+    return name, pd.concat(parts)
 
 
 # ---------------------------------------------------------------------- value features
@@ -293,9 +317,8 @@ def run(
     reference = pd.read_parquet(dataset_dir / "p3a_logreg_oof.parquet").loc[labels.index]
     others = {"logreg_historical": reference}
     if compare is not None:
-        config = load_config(compare)
-        transformer = out_of_fold(models_dir / "transformer", config, "F", assignments)
-        others = {f"{config['name']}_F": transformer.loc[labels.index], **others}
+        name, transformer = transformer_oof(models_dir, compare, assignments)
+        others = {f"{name}_F": transformer.loc[labels.index], **others}
     for name in ("counts", "counts_values"):
         for other_name, other in others.items():
             label = (

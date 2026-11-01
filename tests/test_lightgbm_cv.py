@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-import lightgbm
+import subprocess
+import sys
+
 import numpy as np
 import pandas as pd
 
-from ehrforecast.lightgbm_cv import FIXED, latest_values, select_setting, value_features
+from ehrforecast.lightgbm_cv import latest_values, select_setting, value_features
 
 
 def _events(rows: list[tuple[str, str, float, str, str]]) -> pd.DataFrame:
@@ -42,7 +44,7 @@ def test_latest_value_takes_the_median_of_ties_at_the_latest_time() -> None:
     )
     out = latest_values(events, COHORT).set_index("key")
     assert out.loc["A\tmg", "value"] == 6.0
-    assert np.isclose(out.loc["A\tmg", "log_days"], np.log1p(1.0))
+    assert np.isclose(out["log_days"].to_numpy()[out.index.get_loc("A\tmg")], np.log1p(1.0))
     assert "A\tnounit" in out.index
 
 
@@ -79,13 +81,26 @@ def test_binned_values_use_fit_patient_edges() -> None:
     assert held.loc["p6", "value:A\tmg"] == 0.0
 
 
+TRUNCATION_CHECK = """
+import lightgbm, numpy as np
+from ehrforecast.lightgbm_cv import FIXED
+rng = np.random.default_rng(0)
+x = rng.normal(size=(300, 6)).astype("float32")
+y = (x[:, 0] + rng.normal(size=300) > 0).astype(int)
+long = lightgbm.LGBMClassifier(n_estimators=30, num_leaves=8, **FIXED).fit(x, y)
+short = lightgbm.LGBMClassifier(n_estimators=10, num_leaves=8, **FIXED).fit(x, y)
+assert np.array_equal(long.predict_proba(x, num_iteration=10), short.predict_proba(x))
+import sys
+assert "torch" not in sys.modules, "lightgbm_cv must not import torch (two OpenMP runtimes)"
+"""
+
+
 def test_the_first_trees_of_a_longer_model_equal_a_shorter_model() -> None:
-    rng = np.random.default_rng(0)
-    x = rng.normal(size=(300, 6)).astype("float32")
-    y = (x[:, 0] + rng.normal(size=300) > 0).astype(int)
-    long = lightgbm.LGBMClassifier(n_estimators=30, num_leaves=8, **FIXED).fit(x, y)
-    short = lightgbm.LGBMClassifier(n_estimators=10, num_leaves=8, **FIXED).fit(x, y)
-    assert np.array_equal(long.predict_proba(x, num_iteration=10), short.predict_proba(x))
+    # A clean interpreter: other tests load PyTorch, whose OpenMP runtime can crash LightGBM.
+    result = subprocess.run(
+        [sys.executable, "-c", TRUNCATION_CHECK], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr[-2000:]
 
 
 def test_selection_uses_mean_auroc_and_flags_grid_edges() -> None:
