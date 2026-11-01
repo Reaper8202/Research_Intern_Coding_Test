@@ -126,8 +126,15 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   [-0.000, +0.017]. On the 541 patients with a modality input: AUROC -0.003 [-0.020, +0.015].
   The modalities show no measurable benefit (D34). Against the step-2 logistic regression:
   AUROC +0.017 [+0.007, +0.027], mAP +0.005 [-0.007, +0.016].
-* Next: P4e. Freeze the multimodal F bundle, score official val once, and write the test
-  predictions from the five fold models.
+* E11 LightGBM (section 7.2, training CV): counts AUROC 0.779 / mAP 0.229; counts + values
+  0.774 / 0.243; counts + binned 0.777 / 0.244. Every selection is at the simple edge of the grid
+  (4 leaves, 100 trees). The value-bin check shows no material loss, so E18 is not triggered.
+  **The transformer trails LightGBM:** multimodal F minus LightGBM counts, pooled paired BCa,
+  AUROC -0.023 [-0.032, -0.015] and mAP -0.032 [-0.044, -0.021]. Section 5.4 applies: verify
+  correctness, inspect training-only errors, then at most one recovery round of two configurations.
+  The transformer stays the submission; the gap is reported.
+* Tuning round in progress (`configs/budget.toml`, `reports/transformer/experiments.csv`).
+* Then P4e: freeze the selected bundle, score official val once, and write the test predictions.
 
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the
