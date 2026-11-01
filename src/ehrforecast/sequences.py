@@ -34,6 +34,10 @@ from ehrforecast.tokenizer import IMG, PREFIX, SEP, SEX_TOKENS, FoldTokenizer
 
 HISTORY_VERSION = "patient-histories-v1"
 N_HEAD_FEATURES = 4  # age at anchor / 100, male, scaled recency, missing-history flag
+# Optional age-sex head features (section 5.4 recovery R1): one-hot age bands at the anchor and
+# the same bands for male patients. The bands match the baseline features (``features.py``).
+AGE_BAND_EDGES = (18.0, 35.0, 50.0, 65.0, 80.0)
+N_AGE_SEX_FEATURES = 2 * (len(AGE_BAND_EDGES) + 1)
 RECENCY_SCALE = math.log1p(36525)
 DAYS_PER_YEAR = 365.25
 
@@ -42,6 +46,11 @@ DAYS_PER_YEAR = 365.25
 class SequenceConfig:
     context_length: int = 1024
     max_summary: int = 128
+    age_sex_head: bool = False
+
+    @property
+    def n_head_features(self) -> int:
+        return N_HEAD_FEATURES + (N_AGE_SEX_FEATURES if self.age_sex_head else 0)
 
     def __post_init__(self) -> None:
         if self.max_summary < 0 or self.context_length < self.max_summary + 3:
@@ -213,7 +222,7 @@ class Histories:
             sources=np.concatenate([np.full(n_prefix, -1), event_sources]),
             n_prefix=n_prefix,
             readout=len(tokens) - 1,
-            head=self.head_features(i),
+            head=self.head_features(i, config.age_sex_head),
             first_day=first_day,
             partial_day=partial,
             n_summary=len(hx_tokens),
@@ -221,15 +230,17 @@ class Histories:
             image=self._image(i, static),
         )
 
-    def head_features(self, i: int) -> np.ndarray:
+    def head_features(self, i: int, age_sex: bool = False) -> np.ndarray:
         missing = self.days_since_last[i] < 0
         recency = 0.0 if missing else math.log1p(int(self.days_since_last[i])) / RECENCY_SCALE
-        return np.array(
-            [self.age_at_anchor[i] / 100.0, float(self.male[i]), recency, float(missing)],
-            dtype="float32",
-        )
+        basic = [self.age_at_anchor[i] / 100.0, float(self.male[i]), recency, float(missing)]
+        if not age_sex:
+            return np.array(basic, dtype="float32")
+        bands = np.zeros(len(AGE_BAND_EDGES) + 1, dtype="float32")
+        bands[int(np.searchsorted(AGE_BAND_EDGES, self.age_at_anchor[i], side="right"))] = 1.0
+        return np.concatenate([basic, bands, bands * float(self.male[i])]).astype("float32")
 
-    def _empty(self, i: int) -> Sample:
+    def _empty(self, i: int, config: SequenceConfig) -> Sample:
         sex = self.sex_ids[int(self.male[i])]
         static, static_ages = self._static(i, None)
         n_prefix = len(static) + 2
@@ -239,7 +250,7 @@ class Histories:
             sources=np.full(n_prefix, -1, dtype="int64"),
             n_prefix=n_prefix,
             readout=-1,
-            head=self.head_features(i),
+            head=self.head_features(i, config.age_sex_head),
             image=self._image(i, static),
         )
 
@@ -256,7 +267,7 @@ class Histories:
     def prediction_sample(self, i: int, config: SequenceConfig) -> Sample:
         n = self.n_tokens(i)
         if n == 0:
-            return self._empty(i)
+            return self._empty(i, config)
         starts, days = self._days(i)
         first = self.prediction_start(i, config)
         budget = (

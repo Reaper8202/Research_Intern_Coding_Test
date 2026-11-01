@@ -70,7 +70,11 @@ def config_modalities(dataset_dir: Path, config: dict[str, Any]) -> Modalities |
 
 def sequence_config(config: dict[str, Any]) -> SequenceConfig:
     rep = config["representation"]
-    return SequenceConfig(int(rep["context_length"]), int(rep["max_summary_tokens"]))
+    return SequenceConfig(
+        int(rep["context_length"]),
+        int(rep["max_summary_tokens"]),
+        bool(config["model"].get("age_sex_head", False)),
+    )
 
 
 def model_config(config: dict[str, Any], tokenizer: FoldTokenizer, n_targets: int) -> ModelConfig:
@@ -84,6 +88,7 @@ def model_config(config: dict[str, Any], tokenizer: FoldTokenizer, n_targets: in
         dropout=float(m["dropout"]),
         head_dropout=float(m["head_dropout"]),
         n_targets=n_targets,
+        n_head_features=sequence_config(config).n_head_features,
         image_token_id=tokenizer.token_id(IMG) if tokenizer.imaging else -1,
     )
 

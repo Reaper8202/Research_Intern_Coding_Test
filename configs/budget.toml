@@ -63,3 +63,21 @@ folds = [0]  # the plan's fold-0 screen; five folds only if it passes on fold 0
 id = "E5-ctx2048"
 config = "configs/experiments/mm_ctx2048.toml"
 folds = [0, 1, 2, 3, 4]
+
+# ---------------------------------------------------------------------------------------------
+# Section 5.4 recovery round, added on 1 November 2026 at 15:35, before any score of R1 or R2.
+# Evidence: LightGBM counts beats multimodal F by 0.023 AUROC (pooled paired BCa [-0.032,
+# -0.015]); the gap spans 34 of 40 targets and does not depend on truncated history (129
+# patients: -0.017; others: -0.022). A fit-set age x sex rate table beats the transformer on 15 of
+# 40 targets, so the linear age input of the head is the first suspect. T1 (dropout 0.3) passed;
+# T2 and T3 failed; T4 was failing on mAP with four folds done. At most two configurations.
+
+[[experiment]]
+id = "R1-age-sex-head"
+config = "configs/experiments/mm_agesex.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "R2-age-sex-head-dropout"
+config = "configs/experiments/mm_agesex_dropout03.toml"
+folds = [0, 1, 2, 3, 4]

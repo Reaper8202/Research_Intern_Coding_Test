@@ -180,3 +180,30 @@ def test_all_unknown_history_gives_a_valid_finite_prediction() -> None:
     )
     p = predict_samples(model, [sample], torch.device("cpu"), 1)
     assert p.shape == (1, 3) and np.isfinite(p).all()
+
+
+def test_age_sex_head_features_match_the_baseline_age_bands() -> None:
+    import numpy as np
+
+    from ehrforecast.features import FeatureConfig, demographic_features
+    from ehrforecast.sequences import N_AGE_SEX_FEATURES, N_HEAD_FEATURES, SequenceConfig
+    from ehrforecast.training import model_config
+    from tests.transformer_fixtures import config as fixture_config
+    from tests.transformer_fixtures import fold_data
+
+    fold = fold_data()
+    histories = fold.histories
+    plain = SequenceConfig(48, 6)
+    extended = SequenceConfig(48, 6, age_sex_head=True)
+    assert extended.n_head_features == N_HEAD_FEATURES + N_AGE_SEX_FEATURES == 16
+    cohort = fold.data.inputs.cohort.assign(age_at_anchor=histories.age_at_anchor)
+    bands = demographic_features(cohort, FeatureConfig()).filter(like="age_band").to_numpy()
+    for i in range(len(histories)):
+        a = histories.prediction_sample(i, plain).head
+        b = histories.prediction_sample(i, extended).head
+        assert len(a) == 4 and np.array_equal(a, b[:4])
+        assert b[4:10].sum() == 1 and np.array_equal(b[4:10], bands[i])
+        assert np.array_equal(b[10:], b[4:10] * histories.male[i])
+    on = fixture_config(model={"age_sex_head": True})
+    assert model_config(on, fold.tokenizer, 3).n_head_features == 16
+    assert model_config(fixture_config(), fold.tokenizer, 3).n_head_features == 4
