@@ -46,6 +46,7 @@ from ehrforecast.training import (
     micro_batches,
     next_token_loss_sum,
     param_groups,
+    release_cached_memory,
     rng_state,
     run_record,
     save_checkpoint,
@@ -119,6 +120,7 @@ def evaluate_windows(
         is_target = torch.isin(targets.cpu(), target_start_ids)
         target_loss += float(losses[is_target].sum())
         target_count += int(is_target.sum())
+    release_cached_memory(device)
     total = float(count_by_source.sum())
     if total == 0:
         raise ValueError("held-out pretraining windows contain no target tokens")
@@ -237,6 +239,7 @@ def run_pretraining(
                 loss_sum, count, norm = accumulate_step(
                     parts, model, optimizer, scheduler, float(pc["grad_clip"])
                 )
+                release_cached_memory(device)
                 if norm is None:
                     skipped += 1
                     logger.log(

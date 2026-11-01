@@ -13,9 +13,10 @@ FOLD ?= 0
 METHOD ?= F
 RESUME ?=
 RESUME_FLAG = $(if $(RESUME),--resume,)
+WANDB_ENTITY ?= derek-wu820-university-of-toronto
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
-	tokenize pipeline-smoke pretrain finetune clean
+	tokenize pipeline-smoke pretrain finetune cv-summary wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -88,6 +89,17 @@ finetune:
 		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
 		--fold $(FOLD) --method $(METHOD) $(RESUME_FLAG) \
 		--log-file $(LOGS_DIR)/finetune_fold$(FOLD)_$(METHOD).log
+
+# Step 4: training-CV results and the section 5.3 method selection (no official val).
+cv-summary:
+	$(PYTHON) -m ehrforecast.cv_summary \
+		--config $(CONFIG) --dataset $(PROCESSED_DIR) --models $(MODELS_DIR)/transformer \
+		--reports $(REPORTS_DIR)/transformer --log-file $(LOGS_DIR)/cv_summary.log
+
+# Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
+wandb-sync:
+	$(PYTHON) -m ehrforecast.wandb_sync --models $(MODELS_DIR)/transformer \
+		--entity $(WANDB_ENTITY) --log-file $(LOGS_DIR)/wandb_sync.log
 
 # Remove generated data, models, and logs (keeps data/raw and the committed reports).
 clean:

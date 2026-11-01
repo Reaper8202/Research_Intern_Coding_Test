@@ -51,6 +51,7 @@ from ehrforecast.training import (
     load_fold,
     micro_batches,
     param_groups,
+    release_cached_memory,
     rng_state,
     run_record,
     save_checkpoint,
@@ -81,6 +82,7 @@ def predict_samples(
         if not np.isfinite(probabilities).all():
             raise FloatingPointError("non-finite predicted probabilities")
         out[idx] = probabilities
+    release_cached_memory(device)
     return out
 
 
@@ -221,6 +223,7 @@ def run_finetuning(
                 loss_sum, count, norm = accumulate_step(
                     parts, model, optimizer, None, float(fc["grad_clip"])
                 )
+                release_cached_memory(device)
                 if norm is None:
                     skipped += 1
                     logger.log(

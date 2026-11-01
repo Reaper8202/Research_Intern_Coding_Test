@@ -216,3 +216,25 @@ def test_session_limit_pauses_and_resume_completes(tmp_path: Path) -> None:
     assert (paused["status"], paused["epochs_completed"]) == ("paused", 1)
     done = run_pretraining(config(), fold, tmp_path / "p", resume=True, device=CPU)
     assert (done["status"], done["epochs_completed"]) == ("completed", 3)
+
+
+def test_wandb_sync_skips_runs_that_are_still_training(tmp_path: Path) -> None:
+    import os
+
+    from ehrforecast.wandb_sync import finished_sessions
+
+    for name, status, newer_checkpoint in (
+        ("done", "completed", False),
+        ("active", "paused", True),
+        ("uploaded", "completed", False),
+    ):
+        run = tmp_path / name
+        (run / "wandb" / "offline-run-1").mkdir(parents=True)
+        if name == "uploaded":
+            (run / "wandb" / "offline-run-1" / "run-1.wandb.synced").write_text("")
+        (run / "run.json").write_text(json.dumps({"status": status}))
+        (run / "last.pt").write_bytes(b"x")
+        stamp = 1_000_000 + (100 if newer_checkpoint else -100)
+        os.utime(run / "last.pt", (stamp, stamp))
+        os.utime(run / "run.json", (1_000_000, 1_000_000))
+    assert finished_sessions(tmp_path) == [tmp_path / "done" / "wandb" / "offline-run-1"]

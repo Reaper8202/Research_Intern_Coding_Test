@@ -90,24 +90,39 @@ Clinical reference documents remain optional background. They create no implemen
 P4a proves the complete small run and measures speed and memory before broad searches. Full baseline
 searches also wait for G2. Earlier compute estimates are withdrawn.
 
-## Status on 31 October 2026
+## Status on 1 November 2026
 
 * P3a passed: `make preflight` reproduced the step-2 training CV and did not score official val.
   It found invalid medication stops; D31 handles them.
 * P3b–P3c are implemented: fold tokenizers, value bins, refill compression (D32), sequences,
   summaries, pretraining windows, and retention reports for all five folds (`make tokenize`).
 * Training code is implemented: model, self-pretraining, S/H/F, resume, and label-free
-  prediction. `make check` passes 125 tests, including T2–T7, T10–T13, T18–T20, T22–T23, T29–T30,
+  prediction. `make check` passes 129 tests, including T2–T7, T10–T13, T18–T20, T22–T23, T29–T30,
   T34–T36, and T38.
 * G1 checks pass. `make pipeline-smoke` passed G2 on fold 0 with tiny settings: pause and resume,
   H/F/S, a fresh-process prediction of 559 x 40 probabilities, and CPU/MPS agreement (3e-8).
-* No full training run has started. The next step is P4a: fold-0 pretraining, then S, H, and F.
+* P4a and the first part of P4c are complete: self-pretraining and S, H, and F on all five
+  training folds with the default 2 x 128 model (20 runs). All runs ended without NaN values.
+  Logs are in wandb, team `derek-wu820-university-of-toronto`, project `ehr-forecast`.
+* Section 5.3 selected **F**. F scored above S on 5 of 5 folds. Mean masked macro AUROC: F 0.760,
+  S 0.744, H 0.742. Mean mAP: F 0.186, S 0.163, H 0.161. H scored above S on 2 of 5 folds and
+  failed the consistency rule. These are training-CV results; official val was not read.
+  `reports/transformer/small-v1/` holds the fold table, pooled out-of-fold metrics, and paired
+  patient BCa intervals.
+* Pooled out-of-fold, paired patient BCa 95% intervals (1,000 resamples): F minus S, AUROC +0.020
+  [+0.013, +0.028] and mAP +0.027 [+0.017, +0.036]. F minus the step-2 code-count logistic
+  regression, AUROC +0.017 [+0.007, +0.025] and mAP -0.004 [-0.014, +0.007]. F therefore ranks
+  better than that baseline, but its average precision is not clearly different. Pooled values:
+  F 0.750 / 0.163, S 0.730 / 0.136, H 0.734 / 0.141, logistic regression 0.734 / 0.166.
+* Pretraining reached the 30-epoch limit on every fold, with the best epoch at 28 or 29. H reached
+  the limit on folds 0 and 2. Held-out loss still fell slowly at the limit. The limit is the plan
+  setting and stayed fixed for all folds.
+* Fold-4 pretraining failed four times because swap filled the disk. D33 records the cause and
+  the fix (release cached MPS memory after each step). The failed attempts were not used.
 
-Preliminary speed on this Mac (MPS, default 2 x 128 model, 10 optimizer steps each): pretraining
-about 0.7 s per step and 55 s per epoch; supervised training about 0.35 s per step and 30 s per
-epoch, including held-out evaluation. With 30-epoch limits, one fold needs at most about 30
-minutes of pretraining and 15 minutes per supervised method. P4a replaces these figures with
-full-epoch measurements.
+Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
+minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the
+earlier time was memory pressure, not computation. One fold now needs about 20 minutes.
 
 ### Implementation choices the plan left open
 
@@ -124,5 +139,5 @@ full-epoch measurements.
 ## Open decision
 
 * Name on the PDF report and the GitHub / Hugging Face account to publish under.
-* wandb account or team. Use offline logs until selected.
-* Measured local compute ceiling. Set it during P4a before broad experiments (preliminary speeds above).
+* Measured local compute ceiling. P4a measured the speeds above; set the ceiling before broad
+  experiments.

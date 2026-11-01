@@ -85,6 +85,17 @@ def select_device(name: str) -> torch.device:
     return torch.device(name)
 
 
+def release_cached_memory(device: torch.device) -> None:
+    """Return unused cached MPS blocks to the system.
+
+    Sequence lengths change from batch to batch, so the MPS cache fragments and keeps growing.
+    One fold-4 pretraining process passed 20 GB on a 16 GB Mac and filled the disk with swap.
+    The call frees only blocks that no tensor uses, so it changes no result.
+    """
+    if device.type == "mps":
+        torch.mps.empty_cache()
+
+
 def fold_dir(models_dir: Path, config: dict[str, Any], fold: int) -> Path:
     return models_dir / str(config["name"]) / f"fold{fold}"
 

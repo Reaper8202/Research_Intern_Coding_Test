@@ -160,3 +160,25 @@ stop of a repeated zero-length prescription would merge with its own start and d
 history rule are unchanged. Compression runs inside the fold tokenizer, after the anchor cut, so
 a restart after the anchor cannot remove a visible stop. E14 can still compare compression on
 and off, because `events.parquet` itself stays uncompressed.
+
+## D33. Release cached MPS memory after each training step
+
+**Decision.** On MPS, call `torch.mps.empty_cache()` after each optimizer update and after each
+held-out evaluation (`training.release_cached_memory`). The call returns only memory blocks that
+no tensor uses. It changes no computation and no random draw.
+
+**Evidence.** Sequence lengths change from batch to batch, so the MPS cache fragments and grows.
+Folds 0–3 completed without the call; they ran while the disk had free space for swap. Fold-4
+pretraining then failed four times on 31 October 2026. On this 16 GB Mac one process passed 20 GB,
+and swap filled the disk (`No space left on device`). Hard allocator limits failed because of the
+fragmentation (out of memory at 4.7 GB and 7.7 GB limits, with 0.03 GB of live tensors between
+steps). A 40-step probe on fold-4 data: driver memory reached 7.8 GB without the call and stayed at
+0.1–0.5 GB with it. After 20 identical steps, the maximum weight difference with the call was
+2.1e-7. Two runs without the call already differed by 2.6e-7, the normal MPS run-to-run variation.
+The call added under 3% to the probe time.
+
+**Effect.** Fold 4 used the call; folds 0–3 did not. Their computations are the same. The
+restarted fold-4 run reproduced the first epochs of the failed attempts to four decimals. The
+failed attempts were moved out of `models/` and were not used. Later runs use the call.
+The call also made training 3–6 times faster: fold-4 pretraining took 10 minutes, against
+20–61 minutes for folds 0–3, because memory pressure had slowed every step.

@@ -76,15 +76,21 @@ make finetune FOLD=0 METHOD=S     # S: random init; H: fixed pretrained body; F:
 make finetune FOLD=0 METHOD=H
 make finetune FOLD=0 METHOD=F
 make pretrain FOLD=0 RESUME=1     # continue an interrupted run from its last completed epoch
+make cv-summary                   # after all five folds: fold table, pooled metrics, selection
+make wandb-sync                   # upload finished offline runs to wandb
 ```
 
 Each run writes `models/transformer/<config>/fold<k>/<run>/` with `best.pt`, `last.pt`,
-`metrics.jsonl`, and `run.json`. wandb logs offline; sync them with `wandb sync`.
+`metrics.jsonl`, and `run.json`. wandb logs offline. `make wandb-sync` uploads finished runs to
+the team `derek-wu820-university-of-toronto`, project `ehr-forecast`; set `WANDB_ENTITY` to use
+another space. `make cv-summary` writes `reports/transformer/<config>/` and applies the method
+selection rule of model plan section 5.3. Its bootstrap intervals take about 12 minutes.
 `python -m ehrforecast.predict` scores held-out training patients or the test split from saved
 fold models. It reads no labels and refuses official val.
 
 On a laptop: step 1 takes about 20 seconds, step 2 about 2 minutes, `make preflight` and
-`make pipeline-smoke` about 20 seconds each, and `make tokenize` about 45 seconds. `make clean`
+`make pipeline-smoke` about 20 seconds each, and `make tokenize` about 45 seconds. On an M-series
+Mac (MPS), one transformer fold (pretraining, then H, F, and S) takes about 20 minutes. `make clean`
 removes everything that these commands generate, except the committed reports.
 
 ## How leakage is prevented
