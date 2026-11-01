@@ -33,13 +33,20 @@ from ehrforecast.folds import N_FOLDS, fold_patients, load_folds
 from ehrforecast.logging_utils import setup_logging
 from ehrforecast.provenance import file_hash, write_json
 from ehrforecast.sequences import (
+    Histories,
     build_histories,
     histories_provenance,
     retention_report,
     save_histories,
 )
 from ehrforecast.tokenizer import FoldTokenizer, compress_refills
-from ehrforecast.training import fold_dir, load_config, sequence_config
+from ehrforecast.training import (
+    config_modalities,
+    fold_dir,
+    load_config,
+    modality_settings,
+    sequence_config,
+)
 
 log = logging.getLogger("ehrforecast.representation")
 
@@ -98,6 +105,18 @@ def vocabulary_report(tokenizer: FoldTokenizer) -> dict[str, Any]:
     }
 
 
+def modality_report(histories: Histories, rows: np.ndarray, sequence: Any) -> dict[str, Any]:
+    """D34 coverage: patients with genotype tokens, and with a pre-anchor scan in the input."""
+    samples = [histories.prediction_sample(int(r), sequence) for r in rows]
+    genotype = [int(histories.static_offsets[r + 1] - histories.static_offsets[r]) for r in rows]
+    return {
+        "patients": len(rows),
+        "with_genotype_tokens": int(sum(n > 0 for n in genotype)),
+        "genotype_tokens_max": max(genotype, default=0),
+        "with_prescan_image": int(sum(s.image is not None for s in samples)),
+    }
+
+
 def run(
     dataset_dir: Path, config_path: Path, models_dir: Path, reports_dir: Path, folds: list[int]
 ) -> list[dict[str, Any]]:
@@ -106,6 +125,9 @@ def run(
     data = load_training_data(dataset_dir)
     events, cohort, codes = data.inputs.events, data.inputs.cohort, data.inputs.codes
     events_manifest = file_hash(dataset_dir / EVENTS_MANIFEST)
+    genomics_on, imaging_on, _ = modality_settings(config)
+    modalities = config_modalities(dataset_dir, config)
+    modalities_sha = None if modalities is None else modalities.manifest_sha256
     assignments = load_folds(dataset_dir)
     out_dir = reports_dir / str(config["name"])
     batch_size = int(config["pretrain"]["batch_size"])
@@ -118,15 +140,17 @@ def run(
             min_patients=int(rep["min_patients"]),
             refill_gap_days=float(rep["refill_gap_days"]),
             input_sha256=events_manifest,
+            genomics=modalities.genomics if modalities is not None and genomics_on else None,
+            imaging=imaging_on,
         )
-        histories = build_histories(tokenizer.encode(events), cohort, tokenizer, codes)
+        histories = build_histories(tokenizer.encode(events), cohort, tokenizer, codes, modalities)
         directory = fold_dir(models_dir, config, fold)
         directory.mkdir(parents=True, exist_ok=True)
         tokenizer.save(directory / "tokenizer.json")
         save_histories(
             histories,
             directory / "histories.npz",
-            histories_provenance(tokenizer, events_manifest, cohort.index),
+            histories_provenance(tokenizer, events_manifest, cohort.index, modalities_sha),
         )
         fit_rows, held_rows = histories.index_of(fit), histories.index_of(held)
         fit_events = events.loc[events["patient_id"].isin(fit)]
@@ -153,6 +177,12 @@ def run(
                 "window_starts_max": int(starts.max()) if len(starts) else 0,
             },
         }
+        if modalities is not None:
+            report["modalities"] = {
+                "genotype_vocabulary": sum(t.startswith("dna:") for t in tokenizer.vocabulary),
+                "fit": modality_report(histories, fit_rows, sequence),
+                "held": modality_report(histories, held_rows, sequence),
+            }
         write_json(out_dir / f"fold{fold}.json", report)
         log.info(
             "Fold %d: vocabulary %d, fit truncated %.1f%%, held truncated %.1f%%",

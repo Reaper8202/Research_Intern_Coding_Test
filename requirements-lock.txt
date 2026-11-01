@@ -42,6 +42,7 @@ pluggy==1.7.0
 protobuf==7.36.2
 pyarrow==26.0.0
 pydantic==2.14.2
+pydicom==3.0.1
 pydantic_core==2.50.2
 Pygments==2.21.0
 pytest==9.2.0

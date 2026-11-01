@@ -9,6 +9,8 @@ LOGS_DIR ?= logs
 
 # Transformer settings: override on the command line, e.g. `make finetune FOLD=2 METHOD=H`.
 CONFIG ?= configs/transformer.toml
+SMOKE_CONFIG ?= configs/smoke.toml
+IMAGE_SIZE ?= 64
 FOLD ?= 0
 METHOD ?= F
 RESUME ?=
@@ -16,7 +18,7 @@ RESUME_FLAG = $(if $(RESUME),--resume,)
 WANDB_ENTITY ?= derek-wu820-university-of-toronto
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
-	tokenize pipeline-smoke pretrain finetune cv-summary wandb-sync clean
+	modalities tokenize pipeline-smoke pretrain finetune cv-summary wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -66,6 +68,12 @@ preflight:
 		--raw $(RAW_DIR) --dataset $(PROCESSED_DIR) --reports $(REPORTS_DIR) \
 		--config configs/p3a.toml --log-file $(LOGS_DIR)/preflight.log
 
+# D34: read genomics and DICOM files once into a checked cache (needs `make dataset` first).
+modalities:
+	$(PYTHON) -m ehrforecast.modalities \
+		--raw $(RAW_DIR) --out $(PROCESSED_DIR) --reports $(REPORTS_DIR)/dataset \
+		--image-size $(IMAGE_SIZE) --log-file $(LOGS_DIR)/modalities.log
+
 # Steps 3b-3c: fold tokenizers, patient histories, and retention reports (all five folds).
 tokenize:
 	$(PYTHON) -m ehrforecast.representation \
@@ -75,8 +83,9 @@ tokenize:
 # G2 execution check on fold 0 with tiny settings and temporary outputs (not a result).
 pipeline-smoke:
 	$(PYTHON) -m ehrforecast.smoke \
-		--dataset $(PROCESSED_DIR) --config configs/smoke.toml --work $(MODELS_DIR)/smoke \
-		--report $(REPORTS_DIR)/transformer/pipeline_smoke.json --log-file $(LOGS_DIR)/pipeline_smoke.log
+		--dataset $(PROCESSED_DIR) --config $(SMOKE_CONFIG) --work $(MODELS_DIR)/smoke \
+		--report $(REPORTS_DIR)/transformer/pipeline_$(basename $(notdir $(SMOKE_CONFIG))).json \
+		--log-file $(LOGS_DIR)/pipeline_smoke.log
 
 # Step 4: self-pretraining and supervised methods for one fold. Add RESUME=1 to continue.
 pretrain:

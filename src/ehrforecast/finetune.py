@@ -77,7 +77,9 @@ def predict_samples(
     for i in range(0, len(order), batch_size):
         idx = order[i : i + batch_size]
         batch = collate([samples[k] for k in idx], device)
-        logits = model(batch["tokens"], batch["ages"], batch["readout"], batch["head"])
+        logits = model(
+            batch["tokens"], batch["ages"], batch["readout"], batch["head"], batch.get("images")
+        )
         probabilities = torch.sigmoid(logits.cpu().double()).numpy()
         if not np.isfinite(probabilities).all():
             raise FloatingPointError("non-finite predicted probabilities")
@@ -216,7 +218,9 @@ def run_finetuning(
                     ) -> tuple[torch.Tensor, int]:
                         b = collate(c, device)
                         return supervised_loss_sum(
-                            model(b["tokens"], b["ages"], b["readout"], b["head"]), y, m
+                            model(b["tokens"], b["ages"], b["readout"], b["head"], b.get("images")),
+                            y,
+                            m,
                         )
 
                     parts.append((loss_fn, int(unmasked_fit[mb].sum())))

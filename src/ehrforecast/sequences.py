@@ -1,14 +1,19 @@
 """P3c: patient histories, prediction sequences, pretraining windows, and retention reports.
 
-Prediction sequence (model plan section 8.4)::
+Prediction sequence (model plan section 8.4; D34 adds the optional modality tokens)::
 
-    [SEX:*]  hx:<older condition> ...  [SEP]  <clinical events, oldest first>
+    [SEX:*]  [DNA] dna:<genotype> ...  [IMG]  hx:<older condition> ...  [SEP]  <events>
 
 The most recent complete event days that fit the context length are retained. The summary lists
 conditions first diagnosed before the retained window: all target conditions first, oldest
 first, then the most recently diagnosed other conditions, up to ``max_summary`` tokens. Selected
 summary tokens are ordered by first-diagnosis day. Ages are measured from birth, so a common shift
 of all dates leaves every input unchanged. The readout is the last retained clinical event.
+
+Genotype tokens have age 0 (fixed at birth). ``[IMG]`` has the age at the scan. A scan enters
+only when its study date is before the anchor day, the cut of every event table. A pretraining
+window also needs the scan before the window's first day, as for summary conditions, so no
+next-token target can follow a scan the window shows earlier.
 """
 
 from __future__ import annotations
@@ -23,8 +28,9 @@ import numpy as np
 import pandas as pd
 
 from ehrforecast.events import SOURCE_ORDER
+from ehrforecast.modalities import Modalities
 from ehrforecast.provenance import file_hash, object_hash, write_json
-from ehrforecast.tokenizer import PREFIX, SEP, SEX_TOKENS, FoldTokenizer
+from ehrforecast.tokenizer import IMG, PREFIX, SEP, SEX_TOKENS, FoldTokenizer
 
 HISTORY_VERSION = "patient-histories-v1"
 N_HEAD_FEATURES = 4  # age at anchor / 100, male, scaled recency, missing-history flag
@@ -56,6 +62,7 @@ class Sample:
     partial_day: bool = False
     n_summary: int = 0
     n_candidates: int = 0
+    image: np.ndarray | None = None  # the volume behind this sample's ``[IMG]`` token
 
     @property
     def n_events(self) -> int:
@@ -82,10 +89,29 @@ class Histories:
     days_since_last: np.ndarray  # -1 for an empty history
     sex_ids: tuple[int, int] = (0, 0)  # token IDs of [SEX:F], [SEX:M]
     sep_id: int = 0
+    # D34 modality arrays; histories without modalities keep the defaults.
+    static_offsets: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype="int64"))
+    static_tokens: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype="int32"))
+    image_day: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype="int32"))
+    image_id: int = -1
+    volumes: dict[int, np.ndarray] = field(default_factory=dict, repr=False)
     _position: dict[str, int] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         self._position = {p: i for i, p in enumerate(self.patients)}
+        if len(self.static_offsets) == 0:
+            self.static_offsets = np.zeros(len(self.patients) + 1, dtype="int64")
+        if len(self.image_day) == 0:
+            self.image_day = np.full(len(self.patients), -1, dtype="int32")
+
+    @property
+    def multimodal(self) -> bool:
+        return len(self.static_tokens) > 0 or self.image_id >= 0
+
+    def attach_volumes(self, modalities: Modalities) -> None:
+        """Keep the volume of every patient whose pre-anchor scan these histories use."""
+        rows = [int(i) for i in np.flatnonzero(self.image_day >= 0)]
+        self.volumes = {i: modalities.volume(str(self.patients[i])) for i in rows}
 
     def __len__(self) -> int:
         return len(self.patients)
@@ -130,8 +156,36 @@ class Histories:
         counts = np.searchsorted(np.sort(days), window_days, side="left")
         return np.minimum(counts, max_summary)
 
+    def _static(self, i: int, before_day: int | None) -> tuple[np.ndarray, np.ndarray]:
+        """Genotype tokens (age 0), then ``[IMG]`` when the scan is before ``before_day``.
+
+        ``before_day`` is None for a prediction sequence: every stored scan is before the anchor.
+        """
+        a, b = self.static_offsets[i], self.static_offsets[i + 1]
+        tokens = self.static_tokens[a:b].astype("int64")
+        ages = np.zeros(len(tokens), dtype="float64")
+        day = int(self.image_day[i])
+        if day >= 0 and (before_day is None or day < before_day):
+            tokens = np.append(tokens, self.image_id)
+            ages = np.append(ages, day / DAYS_PER_YEAR)
+        return tokens, ages
+
+    def _image(self, i: int, static: np.ndarray) -> np.ndarray | None:
+        if self.image_id < 0 or self.image_id not in static:
+            return None
+        if i not in self.volumes:
+            raise ValueError("a sample has an [IMG] token but no volume; call attach_volumes")
+        return self.volumes[i]
+
     def _assemble(
-        self, i: int, start: int, stop: int, first_day: int, partial: bool, config: SequenceConfig
+        self,
+        i: int,
+        start: int,
+        stop: int,
+        first_day: int,
+        partial: bool,
+        config: SequenceConfig,
+        image_before: int | None,
     ) -> Sample:
         base = self.token_offsets[i]
         events = self.tokens[base + start : base + stop].astype("int64")
@@ -139,23 +193,32 @@ class Histories:
         event_sources = self.sources[base + start : base + stop].astype("int64")
         _, day_values = self._days(i)
         hx_tokens, hx_days = self._summary(i, int(day_values[first_day]), config.max_summary)
+        static, static_ages = self._static(i, image_before)
         first_age = float(event_days[0]) / DAYS_PER_YEAR
         sex = self.sex_ids[int(self.male[i])]
-        tokens = np.concatenate([[sex], hx_tokens, [self.sep_id], events])
+        tokens = np.concatenate([[sex], static, hx_tokens, [self.sep_id], events])
         ages = np.concatenate(
-            [[first_age], hx_days / DAYS_PER_YEAR, [first_age], event_days / DAYS_PER_YEAR]
+            [
+                [first_age],
+                static_ages,
+                hx_days / DAYS_PER_YEAR,
+                [first_age],
+                event_days / DAYS_PER_YEAR,
+            ]
         ).astype("float32")
+        n_prefix = len(static) + len(hx_tokens) + 2
         return Sample(
             tokens=tokens,
             ages=ages,
-            sources=np.concatenate([np.full(len(hx_tokens) + 2, -1), event_sources]),
-            n_prefix=len(hx_tokens) + 2,
+            sources=np.concatenate([np.full(n_prefix, -1), event_sources]),
+            n_prefix=n_prefix,
             readout=len(tokens) - 1,
             head=self.head_features(i),
             first_day=first_day,
             partial_day=partial,
             n_summary=len(hx_tokens),
             n_candidates=int((self._hx(i)[1] < day_values[first_day]).sum()),
+            image=self._image(i, static),
         )
 
     def head_features(self, i: int) -> np.ndarray:
@@ -168,13 +231,16 @@ class Histories:
 
     def _empty(self, i: int) -> Sample:
         sex = self.sex_ids[int(self.male[i])]
+        static, static_ages = self._static(i, None)
+        n_prefix = len(static) + 2
         return Sample(
-            tokens=np.array([sex, self.sep_id], dtype="int64"),
-            ages=np.zeros(2, dtype="float32"),
-            sources=np.full(2, -1, dtype="int64"),
-            n_prefix=2,
+            tokens=np.concatenate([[sex], static, [self.sep_id]]).astype("int64"),
+            ages=np.concatenate([[0.0], static_ages, [0.0]]).astype("float32"),
+            sources=np.full(n_prefix, -1, dtype="int64"),
+            n_prefix=n_prefix,
             readout=-1,
             head=self.head_features(i),
+            image=self._image(i, static),
         )
 
     # ------------------------------------------------------------------ samples
@@ -182,7 +248,8 @@ class Histories:
         """First retained day: the oldest day whose window, prefix, and summary fit."""
         n = self.n_tokens(i)
         starts, days = self._days(i)
-        total = 2 + self._summary_counts(i, days, config.max_summary) + (n - starts)
+        fixed = 2 + len(self._static(i, None)[0])
+        total = fixed + self._summary_counts(i, days, config.max_summary) + (n - starts)
         fits = np.flatnonzero(total <= config.context_length)
         return int(fits[0]) if len(fits) else len(starts) - 1
 
@@ -195,13 +262,14 @@ class Histories:
         budget = (
             config.context_length
             - 2
+            - len(self._static(i, None)[0])
             - int(self._summary_counts(i, days[[first]], config.max_summary)[0])
         )
         start = int(starts[first])
         partial = n - start > budget
         if partial:  # one day alone exceeds the event budget: keep its final tokens
             start = n - budget
-        return self._assemble(i, start, n, first, partial, config)
+        return self._assemble(i, start, n, first, partial, config, None)
 
     def window_starts(self, i: int, config: SequenceConfig) -> int:
         """Number of permitted pretraining window starts (day indices 0 to the prediction start)."""
@@ -213,19 +281,20 @@ class Histories:
         starts, days = self._days(i)
         if not 0 <= first < len(starts):
             raise ValueError("window start day is outside the history")
+        window_day = int(days[first])
         budget = (
             config.context_length
             - 2
+            - len(self._static(i, window_day)[0])
             - int(self._summary_counts(i, days[[first]], config.max_summary)[0])
         )
         ends = np.append(starts[1:], n)
         fitting = np.flatnonzero(ends[first:] - starts[first] <= budget)
         if len(fitting):
-            return self._assemble(
-                i, int(starts[first]), int(ends[first + fitting[-1]]), first, False, config
-            )
+            stop = int(ends[first + fitting[-1]])
+            return self._assemble(i, int(starts[first]), stop, first, False, config, window_day)
         stop = int(ends[first])
-        return self._assemble(i, stop - budget, stop, first, True, config)
+        return self._assemble(i, stop - budget, stop, first, True, config, window_day)
 
 
 def build_histories(
@@ -233,8 +302,14 @@ def build_histories(
     cohort: pd.DataFrame,
     tokenizer: FoldTokenizer,
     codes: list[str],
+    modalities: Modalities | None = None,
 ) -> Histories:
-    """Group encoded events by patient, in ``cohort`` order. ``cohort`` is a prediction cohort."""
+    """Group encoded events by patient, in ``cohort`` order. ``cohort`` is a prediction cohort.
+
+    A multimodal tokenizer needs ``modalities``. The volumes are then attached as well.
+    """
+    if (tokenizer.genomics or tokenizer.imaging) and modalities is None:
+        raise ValueError("this tokenizer uses genomics or imaging; pass the modalities")
     patients = pd.Index(cohort.index)
     position = pd.Series(np.arange(len(patients)), index=patients)
     pos = encoded["patient_id"].map(position)
@@ -266,8 +341,28 @@ def build_histories(
     anchor_day = (anchor - birth).astype("int64")
     days_since_last = np.where(has, anchor_day - last_day, -1)
 
+    modal: dict[str, Any] = {}
+    if modalities is not None and tokenizer.genomics:
+        dna = tokenizer.genomic_tokens(modalities.genomics)
+        dna = dna.loc[dna["patient_id"].isin(patients)]
+        dna_pos = dna["patient_id"].map(position).to_numpy("int64")
+        order = np.argsort(dna_pos, kind="stable")  # keeps [DNA] first, then token-ID order
+        modal["static_tokens"] = dna["token_id"].to_numpy("int32")[order]
+        modal["static_offsets"] = np.searchsorted(
+            dna_pos[order], np.arange(len(patients) + 1)
+        ).astype("int64")
+    if modalities is not None and tokenizer.imaging:
+        scan = modalities.study_dates.reindex(patients).to_numpy("datetime64[D]")
+        known = ~np.isnat(scan)
+        before = np.zeros(len(patients), dtype=bool)
+        before[known] = scan[known] < anchor[known]  # the event-table cut: before the anchor day
+        image_day = np.full(len(patients), -1, dtype="int64")
+        image_day[before] = (scan[before] - birth[before]).astype("int64")
+        modal["image_day"] = image_day.astype("int32")
+        modal["image_id"] = tokenizer.token_id(IMG)
+
     source_index = {s: i for i, s in enumerate(SOURCE_ORDER)}
-    return Histories(
+    histories = Histories(
         patients=patients,
         token_offsets=token_offsets.astype("int64"),
         tokens=frame["token_id"].to_numpy("int32"),
@@ -284,9 +379,14 @@ def build_histories(
         days_since_last=days_since_last.astype("int32"),
         sex_ids=(tokenizer.token_id(SEX_TOKENS["F"]), tokenizer.token_id(SEX_TOKENS["M"])),
         sep_id=tokenizer.token_id(SEP),
+        **modal,
     )
+    if modalities is not None:
+        histories.attach_volumes(modalities)
+    return histories
 
 
+_MODAL_ARRAYS = ("static_offsets", "static_tokens", "image_day")
 _ARRAYS = (
     "token_offsets",
     "tokens",
@@ -306,7 +406,8 @@ _ARRAYS = (
 
 def save_histories(histories: Histories, path: Path, provenance: dict[str, Any]) -> None:
     """Write arrays and a manifest. Loaders compare the manifest with the expected provenance."""
-    arrays = {name: getattr(histories, name) for name in _ARRAYS}
+    names = _ARRAYS + (_MODAL_ARRAYS if histories.multimodal else ())
+    arrays = {name: getattr(histories, name) for name in names}
     tmp = path.with_suffix(".tmp.npz")
     np.savez(tmp, patients=np.asarray(histories.patients, dtype=str), **arrays)
     tmp.replace(path)
@@ -315,6 +416,7 @@ def save_histories(histories: Histories, path: Path, provenance: dict[str, Any])
         **provenance,
         "sex_ids": list(histories.sex_ids),
         "sep_id": histories.sep_id,
+        **({"image_id": histories.image_id} if histories.multimodal else {}),
         "file_sha256": file_hash(path),
     }
     write_json(path.with_suffix(".manifest.json"), manifest)
@@ -331,11 +433,16 @@ def load_histories(path: Path, expected: dict[str, Any]) -> Histories:
     if stale:
         raise ValueError(f"{path} is stale ({', '.join(sorted(stale))}); run `make tokenize`")
     with np.load(path) as data:
-        arrays = {name: data[name] for name in _ARRAYS}
+        names = _ARRAYS + tuple(n for n in _MODAL_ARRAYS if n in data.files)
+        arrays = {name: data[name] for name in names}
         patients = pd.Index(data["patients"].astype(str), name="patient_id")
     sex_ids = manifest["sex_ids"]
     return Histories(
-        patients=patients, sex_ids=(sex_ids[0], sex_ids[1]), sep_id=manifest["sep_id"], **arrays
+        patients=patients,
+        sex_ids=(sex_ids[0], sex_ids[1]),
+        sep_id=manifest["sep_id"],
+        image_id=int(manifest.get("image_id", -1)),
+        **arrays,
     )
 
 
@@ -453,10 +560,16 @@ def retention_report(
 
 
 def histories_provenance(
-    tokenizer: FoldTokenizer, events_manifest_sha256: str, patients: pd.Index
+    tokenizer: FoldTokenizer,
+    events_manifest_sha256: str,
+    patients: pd.Index,
+    modalities_manifest_sha256: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    out = {
         "tokenizer_sha256": tokenizer.sha256,
         "events_manifest_sha256": events_manifest_sha256,
         "patients_sha256": object_hash(list(patients)),
     }
+    if modalities_manifest_sha256 is not None:
+        out["modalities_manifest_sha256"] = modalities_manifest_sha256
+    return out

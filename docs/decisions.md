@@ -68,6 +68,8 @@ last encounter, so the leap-day edge case does not occur in this data.
 
 **Decision.** Do not use genomics or DICOM imaging. Use `imaging_studies.csv` events.
 
+**Superseded on 1 November 2026 by D34.** Derek required a multimodal model.
+
 **Evidence.** `___All_Errors.txt` reports that the genomics folder did not download completely.
 Of the 400 genomics files present, 396 are train, 2 val, 2 test. DICOM covers 28 test patients
 and is 9.2 GB. The README says the CSV tables are enough.
@@ -182,3 +184,40 @@ restarted fold-4 run reproduced the first epochs of the failed attempts to four 
 failed attempts were moved out of `models/` and were not used. Later runs use the call.
 The call also made training 3–6 times faster: fold-4 pretraining took 10 minutes, against
 20–61 minutes for folds 0–3, because memory pressure had slowed every step.
+
+## D34. Multimodal inputs: genomics and pre-anchor brain MRI
+
+**Decision.** Derek required a multimodal model and chose to submit it whatever the CV result.
+The configuration `small-v1-mm` adds two inputs to `small-v1` and changes nothing else:
+
+* Genomics: `[DNA]`, then one `dna:<site>:<variant alleles>` token per carried genotype, after
+  `[SEX]`. A genotype token needs at least 5 fit carriers in the fold. Age is 0 (germline).
+* Brain MRI: one `[IMG]` token after the genotype tokens. A 3-D CNN from random weights (four
+  stride-2 convolutions with 8 to 64 channels, mean pooling, one linear layer; 81,232 parameters)
+  maps the volume to the token embedding. Its age is the age at the scan.
+
+**Date rules.** A scan enters only when its study date is before the anchor day, the rule of every
+event table (`truncation`). A pretraining window also needs the scan before its first day, as for
+summary conditions, so no next-token target follows a scan shown earlier in the window. Genotypes
+carry no dates. Both modality tokens are input-only and are never next-token targets.
+
+**Preprocessing.** `make modalities` reads every file once. Genotype: the number of variant
+alleles over the two strands. Volume: area averaging from 256 cubed to 64 cubed, then the volume's
+own mean and standard deviation, clipped to [-5, 5]. No statistic is shared between patients, and
+no external weights or atlases are used. One file has truncated pixel data; it is recorded in
+`reports/dataset/modalities.json` and skipped.
+
+**Coverage.** Genomics: 396 train, 2 val, 2 test patients (the download log reports an incomplete
+folder). Readable scans before the anchor day: 200 train, 19 val, 28 test. Scans on or after the
+anchor day (34 train, 11 val) are excluded. The volumes are near-identical simulated brains:
+the correlation of 32-cubed block means between patients is 0.995 to 0.999.
+
+**Expected effect.** Small. Genomics reaches 2 of 358 test patients, and the images vary little.
+The comparison with `small-v1` is reported for all patients and for patients with a modality.
+
+**Verification.** `tests/test_modalities.py`: genotype counting, DICOM resampling, a truncated
+file, cache hashes, fit-only genotype vocabulary, the anchor-day and window rules (a mutation of
+`<` to `<=` fails a test), the context budget, and image-to-row routing in the model. A CSV-only
+tokenizer keeps its hash, and the trained `small-v1` fold-0 model reproduces its saved held-out
+predictions (maximum difference 1.2e-6, CPU against MPS). `make pipeline-smoke
+SMOKE_CONFIG=configs/smoke_mm.toml` passed with images and genotypes in the inputs.

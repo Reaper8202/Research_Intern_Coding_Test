@@ -28,6 +28,7 @@ import torch
 from ehrforecast.contracts import TrainingData, load_training_data
 from ehrforecast.events import EVENTS_MANIFEST
 from ehrforecast.folds import fold_patients, load_folds
+from ehrforecast.modalities import Modalities, load_modalities
 from ehrforecast.model import EHRTransformer, ModelConfig
 from ehrforecast.provenance import file_hash, object_hash, write_json
 from ehrforecast.sequences import (
@@ -37,7 +38,7 @@ from ehrforecast.sequences import (
     histories_provenance,
     load_histories,
 )
-from ehrforecast.tokenizer import FoldTokenizer, age_features
+from ehrforecast.tokenizer import IMG, FoldTokenizer, age_features
 
 CHECKPOINT_VERSION = "transformer-checkpoint-v1"
 IGNORE = -100
@@ -50,6 +51,21 @@ def load_config(path: Path) -> dict[str, Any]:
         if section not in config:
             raise ValueError(f"{path} lacks the [{section}] section")
     return config
+
+
+def modality_settings(config: dict[str, Any]) -> tuple[bool, bool, int]:
+    """``[modalities]`` (D34): genomics on, imaging on, image size. Absent means CSV only."""
+    section = config.get("modalities", {})
+    return (
+        bool(section.get("genomics", False)),
+        bool(section.get("imaging", False)),
+        int(section.get("image_size", 64)),
+    )
+
+
+def config_modalities(dataset_dir: Path, config: dict[str, Any]) -> Modalities | None:
+    genomics, imaging, size = modality_settings(config)
+    return load_modalities(dataset_dir, size) if genomics or imaging else None
 
 
 def sequence_config(config: dict[str, Any]) -> SequenceConfig:
@@ -68,6 +84,7 @@ def model_config(config: dict[str, Any], tokenizer: FoldTokenizer, n_targets: in
         dropout=float(m["dropout"]),
         head_dropout=float(m["head_dropout"]),
         n_targets=n_targets,
+        image_token_id=tokenizer.token_id(IMG) if tokenizer.imaging else -1,
     )
 
 
@@ -126,10 +143,19 @@ def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold:
     tokenizer = FoldTokenizer.load(directory / "tokenizer.json")
     if tokenizer.fit_patients_sha256 != object_hash(sorted(fit.tolist())):
         raise ValueError("tokenizer was fitted on different patients than this fold's fit set")
+    genomics, imaging, _ = modality_settings(config)
+    if (tokenizer.genomics, tokenizer.imaging) != (genomics, imaging):
+        raise ValueError("the fold tokenizer and the configuration use different modalities")
+    modalities = config_modalities(dataset_dir, config)
     expected = histories_provenance(
-        tokenizer, file_hash(dataset_dir / EVENTS_MANIFEST), data.inputs.cohort.index
+        tokenizer,
+        file_hash(dataset_dir / EVENTS_MANIFEST),
+        data.inputs.cohort.index,
+        None if modalities is None else modalities.manifest_sha256,
     )
     histories = load_histories(directory / "histories.npz", expected)
+    if modalities is not None:
+        histories.attach_volumes(modalities)
     runtime = config["runtime"]
     fit = _capped(fit, int(runtime.get("max_fit_patients", 0)))
     held = _capped(held, int(runtime.get("max_held_patients", 0)))
@@ -141,6 +167,8 @@ def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold:
         "histories_sha256": file_hash(directory / "histories.npz"),
         "events_manifest_sha256": expected["events_manifest_sha256"],
     }
+    if modalities is not None:
+        provenance["modalities_manifest_sha256"] = modalities.manifest_sha256
     return FoldData(
         data,
         tokenizer,
@@ -167,7 +195,10 @@ def micro_batches(batch: np.ndarray, size: int) -> Iterator[np.ndarray]:
 
 
 def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.Tensor]:
-    """Right-pad samples. Also build next-token targets: clinical events after the prefix."""
+    """Right-pad samples. Also build next-token targets: clinical events after the prefix.
+
+    ``images`` (present only when a sample has ``[IMG]``) stacks the volumes in sample order.
+    """
     n, width = len(samples), max(len(s.tokens) for s in samples)
     tokens = np.zeros((n, width), dtype="int64")
     ages = np.zeros((n, width), dtype="float32")
@@ -179,7 +210,7 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
         # Position j predicts token j + 1 when token j + 1 is a clinical event.
         targets[b, s.n_prefix - 1 : length - 1] = s.tokens[s.n_prefix :]
         sources[b, s.n_prefix - 1 : length - 1] = s.sources[s.n_prefix :]
-    return {
+    batch = {
         "tokens": torch.from_numpy(tokens).to(device),
         "ages": torch.from_numpy(age_features(ages)).to(device),
         "targets": torch.from_numpy(targets).to(device),
@@ -187,6 +218,11 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
         "readout": torch.tensor([s.readout for s in samples], device=device),
         "head": torch.from_numpy(np.stack([s.head for s in samples])).to(device),
     }
+    images = [s.image for s in samples if s.image is not None]
+    if images:
+        stacked = np.stack(images).astype("float32")[:, None]
+        batch["images"] = torch.from_numpy(stacked).to(device)
+    return batch
 
 
 # ---------------------------------------------------------------------- losses
@@ -196,7 +232,7 @@ def next_token_loss_sum(
     """Summed cross-entropy over eligible target positions and their count."""
     eligible = batch["targets"] != IGNORE
     count = int(eligible.sum())
-    states = model.hidden(batch["tokens"], batch["ages"])[eligible]
+    states = model.hidden(batch["tokens"], batch["ages"], batch.get("images"))[eligible]
     if count == 0:
         return states.sum() * 0.0, 0
     logits = model.next_token_logits(states)

@@ -4,7 +4,8 @@ Each run directory holds ``best.pt`` (or a named checkpoint) and sits inside a f
 with that fold's ``tokenizer.json``. Patients are encoded only with the saved tokenizer. With
 several run directories, probabilities are averaged (D22). Prior-condition cells are set to zero.
 This command reads no labels and no future tables. It refuses official val: val scoring belongs
-to the frozen P4e bundle.
+to the frozen P4e bundle. A multimodal model (D34) also reads the modality cache; scans on or
+after a patient's anchor day are not used.
 
 Usage::
 
@@ -33,10 +34,17 @@ from ehrforecast.finetune import predict_samples
 from ehrforecast.folds import fold_patients, load_folds
 from ehrforecast.logging_utils import setup_logging
 from ehrforecast.masking import apply_prior_mask
+from ehrforecast.modalities import Modalities
 from ehrforecast.model import EHRTransformer, ModelConfig
 from ehrforecast.sequences import build_histories
 from ehrforecast.tokenizer import FoldTokenizer
-from ehrforecast.training import CHECKPOINT_VERSION, model_config, sequence_config
+from ehrforecast.training import (
+    CHECKPOINT_VERSION,
+    config_modalities,
+    modality_settings,
+    model_config,
+    sequence_config,
+)
 
 log = logging.getLogger("ehrforecast.predict")
 
@@ -75,6 +83,7 @@ def predict_inputs(
     inputs: PredictionInputs,
     device: torch.device,
     batch_size: int = 64,
+    modalities: Modalities | None = None,
 ) -> pd.DataFrame:
     """Average fold-model probabilities, then set prior-condition cells to zero."""
     if not fold_models:
@@ -83,8 +92,13 @@ def predict_inputs(
     for fm in fold_models:
         if fm.model.config.n_targets != len(inputs.codes):
             raise ValueError("model outputs do not match the target list")
+        multimodal = fm.tokenizer.genomics or fm.tokenizer.imaging
         histories = build_histories(
-            fm.tokenizer.encode(inputs.events), inputs.cohort, fm.tokenizer, inputs.codes
+            fm.tokenizer.encode(inputs.events),
+            inputs.cohort,
+            fm.tokenizer,
+            inputs.codes,
+            modalities if multimodal else None,
         )
         sequence = sequence_config(fm.config)
         samples = [histories.prediction_sample(i, sequence) for i in range(len(histories))]
@@ -119,7 +133,12 @@ def main(argv: list[str] | None = None) -> None:
         _, patients = fold_patients(load_folds(args.dataset), args.heldout_fold)
     inputs = load_prediction_inputs(args.dataset, pd.Index(patients, name="patient_id"))
     fold_models = [load_fold_model(d, args.checkpoint) for d in args.run_dir]
-    probabilities = predict_inputs(fold_models, inputs, torch.device(args.device))
+    if len({modality_settings(fm.config) for fm in fold_models}) > 1:
+        raise ValueError("the fold models use different modalities")
+    modalities = config_modalities(args.dataset, fold_models[0].config)
+    probabilities = predict_inputs(
+        fold_models, inputs, torch.device(args.device), modalities=modalities
+    )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     probabilities.to_csv(args.out, index_label="patient_id")
     log.info("Wrote %d x %d probabilities to %s", *probabilities.shape, args.out)

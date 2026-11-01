@@ -18,12 +18,16 @@ imaging studies          ``img:<modality>|<body site>``
 encounters               ``enc:<class>:<code>``
 structure                ``[PAD]``, ``[SEP]``, ``[SEX:F]``, ``[SEX:M]``, ``[UNK:<prefix>]``,
                          ``hx:<condition code>``
+genomics (D34)           ``[DNA]`` (a genotype file exists), ``dna:<site>:<variant alleles>``
+brain MRI (D34)          ``[IMG]``; the model replaces its embedding with the image encoding
 ======================== ===================================================================
 
 A base code (for example ``med:<code>`` or ``obs:<code>``) is eligible when at least
 ``min_patients`` fit patients have it. Unknown base codes map to ``[UNK:<prefix>]``. Value tokens
 also need ``min_patients`` fit patients; rarer values and unseen units of an eligible observation
 code map to ``other_value``. Nothing is fitted on descriptions, labels, or held-out patients.
+A genotype token also needs ``min_patients`` fit carriers; rarer genotypes are left out. A
+tokenizer fitted without modalities has the same vocabulary and hash as before D34.
 """
 
 from __future__ import annotations
@@ -60,6 +64,7 @@ INTERVAL_SOURCES = ("conditions", "medications", "careplans", "allergies", "devi
 PAD, SEP = "[PAD]", "[SEP]"
 SEX_TOKENS = {"F": "[SEX:F]", "M": "[SEX:M]"}
 SPECIAL_TOKENS = (PAD, SEP, *SEX_TOKENS.values(), *(f"[UNK:{p}]" for p in PREFIX.values()))
+DNA, IMG = "[DNA]", "[IMG]"
 NO_UNIT = "nounit"
 
 # Age features: age/100 plus sine and cosine terms for eight periods from 0.5 to 200 years.
@@ -149,6 +154,8 @@ class FoldTokenizer:
     refill_gap_days: float
     fit_patients_sha256: str
     input_sha256: str
+    genomics: bool = False
+    imaging: bool = False
 
     def __post_init__(self) -> None:
         index = {token: i for i, token in enumerate(self.vocabulary)}
@@ -166,8 +173,14 @@ class FoldTokenizer:
         min_patients: int = 5,
         refill_gap_days: float = 1.0,
         input_sha256: str = "",
+        genomics: pd.DataFrame | None = None,
+        imaging: bool = False,
     ) -> FoldTokenizer:
-        """Fit on fit patients' permitted histories. Other patients' rows are ignored."""
+        """Fit on fit patients' permitted histories. Other patients' rows are ignored.
+
+        ``genomics`` (``modalities.read_genomics`` rows) adds genotype tokens; ``imaging`` adds
+        ``[IMG]``. Both are fitted on fit patients only.
+        """
         validate_ids(fit_patients)
         fit_events = events.loc[events["patient_id"].isin(fit_patients)]
         fit_events, _ = compress_refills(fit_events, refill_gap_days)
@@ -226,8 +239,18 @@ class FoldTokenizer:
             tokens.update(rule["tokens"])
         for code, values in text_values.items():
             tokens.update(f"obs:{code}:{value}" for value in values)
+        specials: list[str] = list(SPECIAL_TOKENS)
+        if genomics is not None:
+            carried = genomics.loc[
+                genomics["patient_id"].isin(fit_patients) & genomics["count"].gt(0)
+            ]
+            carriers = carried["patient_id"].groupby(_genotype_tokens(carried)).nunique()
+            tokens.update(carriers.index[carriers >= min_patients])
+            specials.append(DNA)
+        if imaging:
+            specials.append(IMG)
         return cls(
-            vocabulary=(*SPECIAL_TOKENS, *sorted(tokens)),
+            vocabulary=(*specials, *sorted(tokens)),
             eligible=eligible,
             numeric_bins=numeric_bins,
             text_values=text_values,
@@ -235,6 +258,8 @@ class FoldTokenizer:
             refill_gap_days=refill_gap_days,
             fit_patients_sha256=object_hash(sorted(fit_patients.tolist())),
             input_sha256=input_sha256,
+            genomics=genomics is not None,
+            imaging=imaging,
         )
 
     # ------------------------------------------------------------------ lookup
@@ -249,15 +274,39 @@ class FoldTokenizer:
         return tokens.map(self._index).to_numpy(dtype="int64")  # type: ignore[attr-defined]
 
     def input_only_ids(self) -> np.ndarray:
-        """Structure and summary tokens: model inputs, never next-token targets."""
+        """Structure, summary, and modality tokens: model inputs, never next-token targets."""
         return np.array(
             [
                 i
                 for i, token in enumerate(self.vocabulary)
-                if token in {PAD, SEP, *SEX_TOKENS.values()} or token.startswith("hx:")
+                if token in {PAD, SEP, DNA, IMG, *SEX_TOKENS.values()}
+                or token.startswith(("hx:", "dna:"))
             ],
             dtype="int64",
         )
+
+    def genomic_tokens(self, genomics: pd.DataFrame) -> pd.DataFrame:
+        """``patient_id`` and ``token_id``: ``[DNA]`` for each patient, then known genotypes.
+
+        Genotype tokens follow in token-ID order. Genotypes outside the vocabulary are left out.
+        """
+        if not self.genomics:
+            raise ValueError("this tokenizer was fitted without genomics")
+        patients = pd.unique(genomics["patient_id"].astype(str))
+        marker = pd.DataFrame({"patient_id": patients, "token_id": self.token_id(DNA), "rank": 0})
+        carried = genomics.loc[genomics["count"].gt(0)]
+        ids = _genotype_tokens(carried).map(self._index)  # type: ignore[attr-defined]
+        known = ids.notna()
+        variants = pd.DataFrame(
+            {
+                "patient_id": carried.loc[known, "patient_id"].astype(str),
+                "token_id": ids[known].astype("int64"),
+                "rank": 1,
+            }
+        )
+        out = pd.concat([marker, variants], ignore_index=True)
+        out = out.sort_values(["patient_id", "rank", "token_id"], kind="stable")
+        return out[["patient_id", "token_id"]].reset_index(drop=True)
 
     # ------------------------------------------------------------------ encoding
     def tokens(self, events: pd.DataFrame) -> pd.Series:
@@ -358,6 +407,12 @@ class FoldTokenizer:
             "eligible": sorted(self.eligible),
             "numeric_bins": self.numeric_bins,
             "text_values": {k: list(v) for k, v in sorted(self.text_values.items())},
+            # Only multimodal tokenizers carry this key, so earlier hashes are unchanged.
+            **(
+                {"modalities": {"genomics": self.genomics, "imaging": self.imaging}}
+                if self.genomics or self.imaging
+                else {}
+            ),
         }
 
     @property
@@ -387,4 +442,10 @@ class FoldTokenizer:
             refill_gap_days=float(data["refill_gap_days"]),
             fit_patients_sha256=data["fit_patients_sha256"],
             input_sha256=data["input_sha256"],
+            genomics=bool(data.get("modalities", {}).get("genomics", False)),
+            imaging=bool(data.get("modalities", {}).get("imaging", False)),
         )
+
+
+def _genotype_tokens(genomics: pd.DataFrame) -> pd.Series:
+    return "dna:" + genomics["site"].astype(str) + ":" + genomics["count"].astype(str)

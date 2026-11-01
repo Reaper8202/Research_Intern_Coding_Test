@@ -6,6 +6,9 @@
   symbols (padding, structure, and summary tokens) are removed from the output distribution.
 * Prediction head: the last clinical-event state, joined with the head features, then dropout and
   one linear layer with 40 logits. A patient without clinical events gets a zero state.
+* Image encoder (D34, only when the tokenizer has ``[IMG]``): a four-layer 3-D CNN from random
+  weights maps a standardized brain volume to one ``d_model`` vector. That vector replaces the
+  ``[IMG]`` token embedding, so the image enters attention like any other input token.
 
 Sequences are right-padded. Causal attention then keeps every real position independent of the
 padding after it. No external weights are loaded anywhere.
@@ -13,6 +16,7 @@ padding after it. No external weights are loaded anywhere.
 
 from __future__ import annotations
 
+import itertools
 import math
 from dataclasses import asdict, dataclass
 
@@ -35,6 +39,7 @@ class ModelConfig:
     n_targets: int = 40
     n_head_features: int = 4
     rope_base: float = 10_000.0
+    image_token_id: int = -1  # -1: no image encoder
 
     def __post_init__(self) -> None:
         if self.d_model % self.n_heads or (self.d_model // self.n_heads) % 2:
@@ -77,9 +82,28 @@ class Block(nn.Module):
         return x + self.drop(self.fc_out(F.gelu(self.fc_in(self.ln2(x)))))
 
 
+class ImageEncoder(nn.Module):
+    """(N, 1, S, S, S) standardized volumes -> (N, d_model). Strided convolutions, mean pooling."""
+
+    channels = (1, 8, 16, 32, 64)
+
+    def __init__(self, d_model: int, dropout: float) -> None:
+        super().__init__()
+        layers: list[nn.Module] = []
+        for c_in, c_out in itertools.pairwise(self.channels):
+            layers += [nn.Conv3d(c_in, c_out, 3, stride=2, padding=1), nn.GELU()]
+        self.features = nn.Sequential(*layers)
+        self.drop = nn.Dropout(dropout)
+        self.project = nn.Linear(self.channels[-1], d_model)
+
+    def forward(self, volumes: torch.Tensor) -> torch.Tensor:
+        return self.project(self.drop(self.features(volumes).mean(dim=(2, 3, 4))))
+
+
 class EHRTransformer(nn.Module):
     output_mask: torch.Tensor
     blocks: nn.ModuleList
+    image_encoder: ImageEncoder | None
 
     def __init__(self, config: ModelConfig, input_only_ids: torch.Tensor | None = None) -> None:
         super().__init__()
@@ -92,6 +116,7 @@ class EHRTransformer(nn.Module):
         self.ln_final = nn.LayerNorm(d)
         self.head_dropout = nn.Dropout(config.head_dropout)
         self.classifier = nn.Linear(d + config.n_head_features, config.n_targets)
+        self.image_encoder = ImageEncoder(d, config.dropout) if config.image_token_id >= 0 else None
         mask = torch.zeros(config.vocab_size, dtype=torch.bool)
         if input_only_ids is not None:
             mask[input_only_ids] = True
@@ -110,7 +135,8 @@ class EHRTransformer(nn.Module):
             nn.init.zeros_(module.bias)
 
     def body_modules(self) -> list[nn.Module]:
-        return [self.token_embedding, self.age_embedding, self.blocks, self.ln_final]
+        body = [self.token_embedding, self.age_embedding, self.blocks, self.ln_final]
+        return body + ([self.image_encoder] if self.image_encoder is not None else [])
 
     def body_parameters(self) -> list[nn.Parameter]:
         return [p for m in self.body_modules() for p in m.parameters()]
@@ -118,9 +144,24 @@ class EHRTransformer(nn.Module):
     def head_parameters(self) -> list[nn.Parameter]:
         return list(self.classifier.parameters())
 
-    def hidden(self, tokens: torch.Tensor, ages: torch.Tensor) -> torch.Tensor:
-        """(B, T) token IDs and (B, T, age features) -> (B, T, d_model)."""
-        x = self.drop(self.token_embedding(tokens) + self.age_embedding(ages))
+    def hidden(
+        self, tokens: torch.Tensor, ages: torch.Tensor, images: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        """(B, T) token IDs and (B, T, age features) -> (B, T, d_model).
+
+        ``images`` holds one volume per ``[IMG]`` token, in row order (at most one per row).
+        """
+        x = self.token_embedding(tokens)
+        if self.image_encoder is not None:
+            rows, cols = torch.nonzero(tokens == self.config.image_token_id, as_tuple=True)
+            n_images = 0 if images is None else images.shape[0]
+            if len(rows) != n_images:
+                raise ValueError(f"{len(rows)} [IMG] tokens but {n_images} image volumes")
+            if images is not None and n_images:
+                x = x.index_put((rows, cols), self.image_encoder(images).to(x.dtype))
+        elif images is not None:
+            raise ValueError("image volumes were given to a model without an image encoder")
+        x = self.drop(x + self.age_embedding(ages))
         for block in self.blocks:
             x = block(x)
         return self.ln_final(x)
@@ -145,5 +186,6 @@ class EHRTransformer(nn.Module):
         ages: torch.Tensor,
         readout: torch.Tensor,
         head_features: torch.Tensor,
+        images: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        return self.classify(self.hidden(tokens, ages), readout, head_features)
+        return self.classify(self.hidden(tokens, ages, images), readout, head_features)

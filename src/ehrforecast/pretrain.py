@@ -103,7 +103,7 @@ def evaluate_windows(
         eligible = batch["targets"] != IGNORE
         if not eligible.any():
             continue
-        states = model.hidden(batch["tokens"], batch["ages"])[eligible]
+        states = model.hidden(batch["tokens"], batch["ages"], batch.get("images"))[eligible]
         targets = batch["targets"][eligible]
         losses = (
             torch.nn.functional.cross_entropy(
