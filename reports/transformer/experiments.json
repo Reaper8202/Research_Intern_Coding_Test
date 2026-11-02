@@ -1,0 +1,329 @@
+{
+  "budget": "configs/budget.toml",
+  "experiments": {
+    "E0-seed2": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": -0.001183985624166195,
+        "mean_map_loss": 0.004206219504411435,
+        "passes_rule": false
+      }
+    },
+    "E0-seed3": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": 0.0017348040785689855,
+        "mean_map_loss": -0.007543086892869355,
+        "passes_rule": false
+      }
+    },
+    "E5-ctx2048": {
+      "vs_incumbent": {
+        "folds": [
+          0
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": 0.0018197619737243542,
+        "mean_map_loss": 0.02281520457430561,
+        "passes_screen": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": 0.002550839912893066,
+        "mean_map_loss": 0.010462358302778224,
+        "passes_screen": false
+      }
+    },
+    "E5-ctx512": {
+      "vs_incumbent": {
+        "folds": [
+          0
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": 0.0018511337509060644,
+        "mean_map_loss": 0.015748407099128753,
+        "passes_screen": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": 0.002582211690074776,
+        "mean_map_loss": 0.0033955608276013682,
+        "passes_screen": false
+      }
+    },
+    "P1-pretrain60": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": -0.003672046595322298,
+        "mean_map_loss": 0.008615012423476764,
+        "passes_rule": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain": -0.0038556527467898728,
+        "mean_map_loss": 0.009727301552962735,
+        "passes_rule": false
+      }
+    },
+    "R1-age-sex-head": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.0035671903727624967,
+        "mean_map_loss": -0.0019527563497582611,
+        "passes_rule": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.003383584221294922,
+        "mean_map_loss": -0.0008404672202722896,
+        "passes_rule": false
+      }
+    },
+    "R2-age-sex-head-dropout": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.007334728851006967,
+        "mean_map_loss": -0.004049415658029493,
+        "passes_rule": true
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.007151122699539392,
+        "mean_map_loss": -0.002937126528543521,
+        "passes_rule": true
+      }
+    },
+    "T1-dropout": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain": 0.007077633752980072,
+        "mean_map_loss": -0.006213314638592937,
+        "passes_rule": true
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.006894027601512498,
+        "mean_map_loss": -0.005101025509106965,
+        "passes_rule": true
+      }
+    },
+    "T2-body-lr": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.0020895229265174065,
+        "mean_map_loss": 0.0041015868857122,
+        "passes_rule": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": 0.0019059167750498317,
+        "mean_map_loss": 0.005213876015198171,
+        "passes_rule": false
+      }
+    },
+    "T3-weight-decay": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 9.638566145249161e-05,
+        "mean_map_loss": 0.0003038569674953806,
+        "passes_rule": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": -8.722049001508303e-05,
+        "mean_map_loss": 0.0014161460969813523,
+        "passes_rule": false
+      }
+    },
+    "T4-regularized": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain": 0.006794145749850822,
+        "mean_map_loss": 0.007409160475262094,
+        "passes_rule": false
+      },
+      "vs_seed_mean": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain": 0.006610539598383247,
+        "mean_map_loss": 0.008521449604748066,
+        "passes_rule": false
+      }
+    }
+  },
+  "incumbent": {
+    "config": "small-v1-mm",
+    "fold_scores": [
+      {
+        "fold": 0,
+        "mAP": 0.22083791388643464,
+        "macro_auroc": 0.7568776575878042
+      },
+      {
+        "fold": 1,
+        "mAP": 0.19811703754795787,
+        "macro_auroc": 0.7633138162058296
+      },
+      {
+        "fold": 2,
+        "mAP": 0.1860753097775009,
+        "macro_auroc": 0.771435260629227
+      },
+      {
+        "fold": 3,
+        "mAP": 0.18809410089857087,
+        "macro_auroc": 0.7542468313111281
+      },
+      {
+        "fold": 4,
+        "mAP": 0.19242085134430292,
+        "macro_auroc": 0.7496342594768726
+      }
+    ]
+  },
+  "method": "F",
+  "passing": [
+    "T1-dropout",
+    "R2-age-sex-head-dropout"
+  ],
+  "rule": "mean AUROC gain >= 0.005, >= 4 of 5 folds higher, mean mAP loss <= 0.005",
+  "scope": "training-split cross-validation; official val not read",
+  "seed_stability": {
+    "mean_auroc_per_seed": [
+      0.7591015650421722,
+      0.7579175794180062,
+      0.7608363691207413
+    ],
+    "mean_map_per_seed": [
+      0.19710904269095342,
+      0.192902823186542,
+      0.20465212958382278
+    ],
+    "note": "spread is descriptive; it is not a significance threshold (section 5.3)",
+    "per_fold_auroc_range": [
+      0.0015300905868234072,
+      0.006193895017496565,
+      0.006325385622357738,
+      0.0049357582642948206,
+      0.009994074493329008
+    ],
+    "seeds": 3
+  }
+}

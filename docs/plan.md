@@ -133,8 +133,14 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   AUROC -0.023 [-0.032, -0.015] and mAP -0.032 [-0.044, -0.021]. Section 5.4 applies: verify
   correctness, inspect training-only errors, then at most one recovery round of two configurations.
   The transformer stays the submission; the gap is reported.
-* Tuning round in progress (`configs/budget.toml`, `reports/transformer/experiments.csv`).
-* Then P4e: freeze the selected bundle, score official val once, and write the test predictions.
+* Tuning round complete (D35; `configs/budget.toml`, `reports/transformer/experiments.csv`).
+  Selected: `small-v1-mm-do03`, multimodal F with fine-tuning dropout 0.3. Mean fold AUROC 0.766
+  and mAP 0.203 (incumbent 0.759 / 0.197); +0.007 AUROC on 5 of 5 folds, about twice the spread
+  of three seeds. Failed: lower body learning rate, weight decay, all three together (mAP), the
+  age-sex head alone, 60 pretraining epochs, and context 512 and 2,048 (fold-0 screens).
+  The LightGBM gap shrank from -0.023 to -0.014 AUROC [-0.021, -0.006] and remains reported.
+* Next: P4e. Freeze the `small-v1-mm-do03` bundle (five fold models), score official val once,
+  and write the test predictions.
 
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the

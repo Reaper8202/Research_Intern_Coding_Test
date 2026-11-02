@@ -231,3 +231,58 @@ file, cache hashes, fit-only genotype vocabulary, the anchor-day and window rule
 tokenizer keeps its hash, and the trained `small-v1` fold-0 model reproduces its saved held-out
 predictions (maximum difference 1.2e-6, CPU against MPS). `make pipeline-smoke
 SMOKE_CONFIG=configs/smoke_mm.toml` passed with images and genotypes in the inputs.
+
+## D35. Tuning round outcome: fine-tuning dropout 0.3 is selected
+
+**Decision.** The selected configuration is `small-v1-mm-do03`: the multimodal model (D34) with
+method F and fine-tuning dropout 0.3 (`configs/experiments/mm_dropout03.toml`). It fine-tunes
+from the incumbent's self-pretraining; only the fine-tuning dropout and head dropout change.
+
+**Round.** `configs/budget.toml`, fixed before any of its scores (commit 39e6b1c), with two dated
+revisions: the section 5.4 recovery round (874c962) and the time-saving scope change (3c9ab12).
+Rule (section 5.3): mean macro AUROC gain at least 0.005, higher AUROC on at least 4 of 5 folds,
+mean mAP loss at most 0.005, against the incumbent's fold scores. Training CV only.
+
+| Experiment | Folds | Mean AUROC | Mean mAP | AUROC gain | Folds higher | mAP loss | Result |
+|---|---|---|---|---|---|---|---|
+| Incumbent `small-v1-mm` | 5 | 0.7591 | 0.1971 | | | | |
+| T1 dropout 0.3 | 5 | 0.7662 | 0.2033 | +0.0071 | 5 | -0.0062 | passes |
+| T2 body learning rate 3e-5 | 5 | 0.7612 | 0.1930 | +0.0021 | 4 | +0.0041 | fails |
+| T3 weight decay 0.1 | 5 | 0.7592 | 0.1968 | +0.0001 | 4 | +0.0003 | fails |
+| T4 T1 + T2 + T3 | 5 | 0.7659 | 0.1897 | +0.0068 | 5 | +0.0074 | fails (mAP) |
+| R1 age-sex head | 5 | 0.7627 | 0.1991 | +0.0036 | 4 | -0.0020 | fails |
+| R2 age-sex head + dropout 0.3 | 5 | 0.7664 | 0.2012 | +0.0073 | 4 | -0.0040 | passes |
+| P1 60 pretraining epochs | 5 | 0.7554 | 0.1885 | -0.0036 | 3 | +0.0086 | fails |
+| E5 context 512 (screen) | fold 0 | | | +0.0019 | | +0.0157 | fails screen |
+| E5 context 2,048 (screen) | fold 0 | | | +0.0018 | | +0.0228 | fails screen |
+
+**Seed stability (E0).** Three seeds of the incumbent: mean AUROC 0.7591, 0.7579, and 0.7608;
+mean mAP 0.197, 0.193, and 0.205. Per-fold AUROC ranges 0.0015 to 0.010. Against the per-fold
+mean of the three seeds, T1 still passes: +0.0069 AUROC, 4 of 5 folds, mAP +0.0051. The AUROC
+gain is about twice the spread of the seed means; the mAP gain is within the mAP seed spread.
+
+**Selection.** T1 and R2 pass and lie within 0.005 of each other on both metrics (R2 AUROC
++0.0002, mAP -0.0021). The section 5.3 order prefers fewer supervised parameters: the T1 head has
+5,320 parameters and the R2 head 5,800. T1 is selected. The combination slot was not used,
+because no passing change came from a different family.
+
+**Pooled out of fold, paired patient BCa 95% (`reports/transformer/small-v1-mm-do03/`).** T1 minus
+the incumbent: AUROC +0.009 [+0.004, +0.014], mAP +0.007 [+0.001, +0.014]. T1 minus the step-2
+logistic regression: AUROC +0.026 [+0.017, +0.036], mAP +0.012 [+0.002, +0.023].
+
+**Interpretation.** Fine-tuning overfitting was the main limitation that this budget could fix.
+The age-sex head helps on its own but adds nothing beside dropout. A lower pretraining loss (P1:
+1.389 against 1.405 on fold 0) did not give better predictions, and neither context length helped.
+
+**Comparison with LightGBM (pooled out of fold, paired patient BCa 95%,
+`reports/lightgbm/transformer_comparison.json`).** T1 minus LightGBM counts: AUROC -0.014
+[-0.021, -0.006], mAP -0.025 [-0.036, -0.013]. T1 minus LightGBM counts + values: AUROC -0.010
+[-0.017, -0.001]. The incumbent's AUROC gap was -0.023, so the round closed about 40% of it.
+Section 5.4 applies: the transformer remains the submission and the gap is reported.
+
+**Caveats.** The selected configuration is the best of 11 trials on the same folds, so its CV
+score is somewhat optimistic; the single official val check (P4e) is the unbiased estimate.
+E0-seed3 fold 3 was resumed from its epoch-6 checkpoint after the 18:10 restart (the G2-tested
+resume path). Its first wandb session ends with an incomplete record, so wandb shows that
+run's steps out of order; its `metrics.jsonl` is the authoritative record. Pooled out-of-fold AUROC (0.760 for T1) is lower than the mean fold AUROC (0.766)
+because pooling mixes fold-specific probability scales.

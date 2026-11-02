@@ -7,8 +7,10 @@ date. Data: the Synthea Coherent dataset as released for the research intern cod
 Status: steps 1 to 3 are done. The CSV-only transformer (`small-v1`) is trained on all five
 training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
 multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
-MRI token from a 3-D CNN. See [the project plan](docs/plan.md) and
-[model plan version 2.3](docs/model_plan.md).
+MRI token from a 3-D CNN. A pre-registered tuning round (D35, `configs/budget.toml`) selected
+fine-tuning dropout 0.3 (`small-v1-mm-do03`). LightGBM remains about 0.014 AUROC stronger in
+training CV; the gap is reported. See [the project plan](docs/plan.md) and
+[model plan version 2.4](docs/model_plan.md).
 
 The final model is a transformer trained from random weights on the supplied training data. Any
 self-pretraining uses only training histories before their anchors. External datasets and
@@ -92,6 +94,14 @@ make pretrain CONFIG=configs/multimodal.toml FOLD=0
 make finetune CONFIG=configs/multimodal.toml FOLD=0 METHOD=F
 make cv-summary CONFIG=configs/multimodal.toml REFERENCE=configs/transformer.toml
 make pipeline-smoke SMOKE_CONFIG=configs/smoke_mm.toml
+```
+
+Tuning round and comparison baselines (training CV only; official val is never read):
+
+```bash
+make experiments                  # configs/budget.toml in order; resumable
+make experiments-summary          # reports/transformer/experiments.csv (section 5.3 rule)
+make lightgbm                     # E11 LightGBM baselines -> reports/lightgbm/
 ```
 
 Genotypes enter as `[DNA] dna:<site>:<variant alleles>` tokens. A scan enters as one `[IMG]`

@@ -339,16 +339,54 @@ def run(
     return summary
 
 
+def compare_saved(
+    dataset_dir: Path, models_dir: Path, reports_dir: Path, configs: list[Path], n_boot: int
+) -> dict[str, Any]:
+    """Paired BCa of transformer F configurations against the saved LightGBM predictions."""
+    data = load_training_data(dataset_dir)
+    labels, prior, codes = data.labels, data.inputs.prior, data.inputs.codes
+    assignments = load_folds(dataset_dir)
+    out: dict[str, Any] = {"scope": "training-split cross-validation; official val not read"}
+    for config in configs:
+        name, transformer = transformer_oof(models_dir, config, assignments)
+        transformer = transformer.loc[labels.index]
+        out[name] = {
+            "pooled": evaluate_predictions(labels, transformer, codes, prior=prior).summary
+        }
+        for feature_set in ("counts", "counts_values"):
+            saved = pd.read_parquet(models_dir / "lightgbm" / f"oof_{feature_set}.parquet")
+            out[name][f"minus_lightgbm_{feature_set}"] = bootstrap_comparison(
+                labels,
+                transformer,
+                codes,
+                other=saved.loc[labels.index],
+                prior=prior,
+                n_boot=n_boot,
+            )
+    write_json(reports_dir / "transformer_comparison.json", out)
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", type=Path, required=True)
     parser.add_argument("--models", type=Path, required=True)
     parser.add_argument("--reports", type=Path, required=True)
     parser.add_argument("--compare-config", type=Path, default=None)
+    parser.add_argument(
+        "--compare-only",
+        type=Path,
+        nargs="+",
+        default=None,
+        help="transformer configs to compare with the saved LightGBM predictions (no refit)",
+    )
     parser.add_argument("--n-boot", type=int, default=1000)
     parser.add_argument("--log-file", type=Path, default=None)
     args = parser.parse_args(argv)
     setup_logging(args.log_file)
+    if args.compare_only:
+        compare_saved(args.dataset, args.models, args.reports, args.compare_only, args.n_boot)
+        return
     summary = run(args.dataset, args.models, args.reports, args.compare_config, args.n_boot)
     for name, choice in summary["selected"].items():
         log.info(
