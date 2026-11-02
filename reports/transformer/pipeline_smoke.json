@@ -1,0 +1,39 @@
+{
+  "config": "configs/smoke.toml",
+  "device_check": {
+    "max_abs_probability_difference": 2.9252332500728784e-08,
+    "mps_available": true,
+    "tolerance": 0.0001
+  },
+  "fixed_body_unchanged": true,
+  "fresh_process_prediction": {
+    "patients": 559,
+    "prior_cells_zero": true,
+    "separately_scored_masked_macro_auroc": 0.5587361483069809,
+    "targets": 40
+  },
+  "gate": "G2 execution check on training data; not a performance result",
+  "methods": {
+    "F": {
+      "best_epoch": 0,
+      "status": "completed",
+      "trainable_parameters": 86472
+    },
+    "H": {
+      "best_epoch": 0,
+      "status": "completed",
+      "trainable_parameters": 1480
+    },
+    "S": {
+      "best_epoch": 0,
+      "status": "completed",
+      "trainable_parameters": 86472
+    }
+  },
+  "official_val_used": false,
+  "pretrain_epochs": 2,
+  "pretrain_paused_status": "paused",
+  "pretrain_resumed": "completed",
+  "seconds": 15.818346166983247,
+  "status": "passed"
+}

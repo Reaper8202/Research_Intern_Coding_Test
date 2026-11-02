@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ehrforecast"
+version = "0.1.0"
+description = "Predict newly diagnosed conditions in the five years after a landmark date from synthetic EHR timelines."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "pyarrow>=15",
+    "scipy>=1.15",
+    "joblib>=1.3",
+    "torch>=2.4",
+    "wandb>=0.17",
+    "pydicom>=3.0",
+    "lightgbm>=4.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "pandas-stubs"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "NPY", "PD", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "joblib.*", "scipy.*"]
+ignore_missing_imports = true

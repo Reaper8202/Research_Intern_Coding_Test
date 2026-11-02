@@ -1,0 +1,6 @@
+fold,vocabulary,fit_truncated_fraction,held_truncated_fraction,fit_tokens_lost_fraction,held_unknown_rate_conditions,median_sequence_length_fit,pretraining_tokens
+0,1959,0.0466,0.0447,0.1507,0.00304,179.0,599183
+1,1963,0.0457,0.0484,0.1789,0.00293,176.0,613142
+2,1960,0.0466,0.0448,0.1801,0.0014,177.0,616861
+3,1937,0.0497,0.0323,0.1782,0.00293,176.0,620637
+4,1959,0.0425,0.0609,0.1591,0.00441,178.0,595541

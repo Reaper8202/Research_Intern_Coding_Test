@@ -1,0 +1,28 @@
+{
+  "files_without_split": [],
+  "image_size": 64,
+  "test": {
+    "genomics_patients": 2,
+    "patients": 358,
+    "readable_scans": 28,
+    "scans_before_anchor_day": 28,
+    "scans_on_or_after_anchor_day": 0
+  },
+  "train": {
+    "genomics_patients": 396,
+    "patients": 2791,
+    "readable_scans": 234,
+    "scans_before_anchor_day": 200,
+    "scans_on_or_after_anchor_day": 34
+  },
+  "unreadable_images": {
+    "36d8e0a3-b81e-89da-71ef-1a2d7a6838d9.dcm": "ValueError: The number of bytes of pixel data is less than expected (32880544 vs 33554432 bytes) - the dataset may be corrupted, have an invalid group 0028 element value, or the transfer syntax may be incorrect"
+  },
+  "val": {
+    "genomics_patients": 2,
+    "patients": 365,
+    "readable_scans": 30,
+    "scans_before_anchor_day": 19,
+    "scans_on_or_after_anchor_day": 11
+  }
+}

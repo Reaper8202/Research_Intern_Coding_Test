@@ -1,0 +1,401 @@
+target,rank,feature,description,coefficient
+444814009,1,recent:procedures:384700001,Injection of tetanus antitoxin,0.0643
+444814009,2,count:procedures:18946005,Epidural anesthesia,0.0624
+444814009,3,count:medications:807283,Mirena 52 MG Intrauterine System,0.059
+444814009,4,recent:conditions:75498004,Acute bacterial sinusitis (disorder),0.0554
+444814009,5,count:conditions:75498004,Acute bacterial sinusitis (disorder),0.0551
+444814009,6,count:conditions:162864005,Body mass index 30+ - obesity (finding),0.0506
+444814009,7,recent:medications:313820,Acetaminophen 160 MG Chewable Tablet,0.0497
+444814009,8,recent:careplans:737471002,Minor surgery care management (procedure),0.0484
+444814009,9,count:conditions:124171000119105,Chronic intractable migraine without aura,0.0462
+444814009,10,count:procedures:68254000,Removal of intrauterine device,0.0459
+195662009,1,count:conditions:43878008,Streptococcal sore throat (disorder),0.0887
+195662009,2,count:medications:834102,Penicillin V Potassium 500 MG Oral Tablet,0.0816
+195662009,3,recent:medications:996740,Memantine hydrochloride 2 MG/ML Oral Solution,0.0713
+195662009,4,recent:conditions:53741008,Coronary Heart Disease,0.0709
+195662009,5,count:medications:2001499,Vitamin B 12 5 MG/ML Injectable Solution,0.0608
+195662009,6,count:conditions:1501000119109,Proliferative diabetic retinopathy due to type II diabetes mellitus (disorder),0.0602
+195662009,7,count:allergies:418689008,Allergy to grass pollen,0.0542
+195662009,8,count:conditions:40055000,Chronic sinusitis (disorder),0.0493
+195662009,9,count:conditions:44465007,Sprain of ankle,0.0487
+195662009,10,recent:conditions:43878008,Streptococcal sore throat (disorder),0.0466
+10509002,1,recent:medications:1367439,NuvaRing 0.12/0.015 MG per 24HR 21 Day Vaginal Ring,0.0661
+10509002,2,count:conditions:283371005,Laceration of forearm,0.0641
+10509002,3,count:conditions:124171000119105,Chronic intractable migraine without aura,0.0639
+10509002,4,recent:medications:310798,Hydrochlorothiazide 25 MG Oral Tablet,0.0625
+10509002,5,recent:conditions:239873007,Osteoarthritis of knee,0.0584
+10509002,6,recent:conditions:162864005,Body mass index 30+ - obesity (finding),0.052
+10509002,7,count:conditions:39848009,Whiplash injury to neck,0.0519
+10509002,8,recent:conditions:43878008,Streptococcal sore throat (disorder),0.0516
+10509002,9,recent:conditions:53741008,Coronary Heart Disease,0.0473
+10509002,10,count:medications:197378,Astemizole 10 MG Oral Tablet,0.0464
+88805009,1,age_band_65_80,,0.1428
+88805009,2,recent:conditions:79586000,Tubal pregnancy,0.0555
+88805009,3,recent:conditions:713197008,Recurrent rectal polyp,0.0528
+88805009,4,count:medications:749882,Norinyl 1+50 28 Day Pack,0.0516
+88805009,5,recent:careplans:736285004,Hyperlipidemia clinical management plan,0.0514
+88805009,6,recent:conditions:15777000,Prediabetes,0.0509
+88805009,7,age_years,,0.0508
+88805009,8,count:medications:106258,Hydrocortisone 10 MG/ML Topical Cream,0.0497
+88805009,9,count:conditions:162864005,Body mass index 30+ - obesity (finding),0.0494
+88805009,10,recent:conditions:36971009,Sinusitis (disorder),0.0488
+230690007,1,age_years,,0.1163
+230690007,2,age_band_80_max,,0.1067
+230690007,3,recent:conditions:49436004,Atrial Fibrillation,0.0543
+230690007,4,count:conditions:43878008,Streptococcal sore throat (disorder),0.049
+230690007,5,recent:medications:310965,Ibuprofen 200 MG Oral Tablet,0.0488
+230690007,6,count:medications:834102,Penicillin V Potassium 500 MG Oral Tablet,0.0486
+230690007,7,recent:conditions:363406005,Malignant tumor of colon,0.0439
+230690007,8,recent:procedures:65588006,Premature birth of newborn,0.0438
+230690007,9,count:conditions:33737001,Fracture of rib,0.0405
+230690007,10,count:conditions:283371005,Laceration of forearm,0.0399
+22298006,1,count:conditions:53741008,Coronary Heart Disease,0.253
+22298006,2,recent:medications:705129,Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray,0.1906
+22298006,3,count:medications:705129,Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray,0.1145
+22298006,4,sex_male,,0.0961
+22298006,5,recent:medications:312961,Simvastatin 20 MG Oral Tablet,0.0585
+22298006,6,count:medications:312961,Simvastatin 20 MG Oral Tablet,0.0517
+22298006,7,recent:conditions:422034002,Diabetic retinopathy associated with type II diabetes mellitus (disorder),0.0484
+22298006,8,recent:medications:562251,Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet,0.0467
+22298006,9,count:conditions:62106007,Concussion with no loss of consciousness,0.0435
+22298006,10,recent:conditions:53741008,Coronary Heart Disease,0.0396
+68496003,1,count:procedures:73761001,Colonoscopy,0.2293
+68496003,2,age_band_50_65,,0.1227
+68496003,3,age_band_65_80,,0.0652
+68496003,4,count:conditions:156073000,Fetus with unknown complication,0.0597
+68496003,5,recent:conditions:5602001,Opioid abuse (disorder),0.0585
+68496003,6,count:conditions:283371005,Laceration of forearm,0.0511
+68496003,7,count:conditions:307731004,Injury of tendon of the rotator cuff of shoulder,0.0506
+68496003,8,count:conditions:230265002,Familial Alzheimer's disease of early onset (disorder),0.0497
+68496003,9,recent:conditions:196416002,Impacted molars,0.0481
+68496003,10,recent:encounters:183478001,Emergency hospital admission for asthma,0.0475
+44465007,1,recent:conditions:275272006,Brain damage - traumatic,0.0535
+44465007,2,count:careplans:133901003,Burn care,0.0523
+44465007,3,recent:encounters:56876005,Drug rehabilitation and detoxification,0.0511
+44465007,4,recent:conditions:422034002,Diabetic retinopathy associated with type II diabetes mellitus (disorder),0.045
+44465007,5,count:conditions:403191005,Second degree burn,0.0448
+44465007,6,recent:medications:748856,Yaz 28 Day Pack,0.0446
+44465007,7,count:conditions:87433001,Pulmonary emphysema (disorder),0.0446
+44465007,8,count:conditions:283371005,Laceration of forearm,0.0443
+44465007,9,count:careplans:47387005,Head injury rehabilitation,0.0443
+44465007,10,count:medications:198405,Ibuprofen 100 MG Oral Tablet,0.0426
+53741008,1,sex_male,,0.0919
+53741008,2,age_band_80_max,,0.0635
+53741008,3,recent:conditions:1501000119109,Proliferative diabetic retinopathy due to type II diabetes mellitus (disorder),0.06
+53741008,4,recent:conditions:309557009,Numbness of face (finding),0.0487
+53741008,5,recent:conditions:93761005,Primary malignant neoplasm of colon,0.0473
+53741008,6,count:allergies:300913006,Shellfish allergy,0.0453
+53741008,7,count:conditions:201834006,Localized  primary osteoarthritis of the hand,0.0435
+53741008,8,recent:medications:198014,Naproxen 500 MG Oral Tablet,0.0435
+53741008,9,recent:medications:308192,Amoxicillin 500 MG Oral Tablet,0.0386
+53741008,10,count:medications:904419,Alendronic acid 10 MG Oral Tablet,0.0384
+233604007,1,count:careplans:386257007,Demential management,0.201
+233604007,2,count:observations:72106-8,Total score [MMSE],0.1787
+233604007,3,count:conditions:26929004,Alzheimer's disease (disorder),0.1764
+233604007,4,count:encounters:316744009,Office Visit,0.1254
+233604007,5,count:conditions:230265002,Familial Alzheimer's disease of early onset (disorder),0.0994
+233604007,6,recent:observations:72106-8,Total score [MMSE],0.0971
+233604007,7,recent:careplans:386257007,Demential management,0.0874
+233604007,8,recent:conditions:230265002,Familial Alzheimer's disease of early onset (disorder),0.0843
+233604007,9,count:medications:1100184,Donepezil hydrochloride 23 MG Oral Tablet,0.072
+233604007,10,count:medications:313185,Tacrine 10 MG Oral Capsule,0.0669
+43878008,1,count:procedures:699253003,Surgical manipulation of joint of knee,0.0591
+43878008,2,recent:conditions:239872002,Osteoarthritis of hip,0.0472
+43878008,3,count:medications:807283,Mirena 52 MG Intrauterine System,0.0452
+43878008,4,recent:encounters:305411003,Admission to thoracic surgery department,0.0451
+43878008,5,count:medications:1049630,diphenhydrAMINE Hydrochloride 25 MG Oral Tablet,0.0409
+43878008,6,recent:conditions:198992004,Antepartum eclampsia,0.0402
+43878008,7,count:medications:308136,amLODIPine 2.5 MG Oral Tablet,0.0397
+43878008,8,count:conditions:368581000119106,Neuropathy due to type 2 diabetes mellitus (disorder),0.0393
+43878008,9,count:conditions:446096008,Perennial allergic rhinitis,0.0379
+43878008,10,count:conditions:197927001,Recurrent urinary tract infection,0.0373
+65966004,1,count:conditions:64859006,Osteoporosis (disorder),0.1343
+65966004,2,age_band_65_80,,0.0751
+65966004,3,count:imaging_studies:DX|12921003,Digital Radiography | Pelvis,0.0708
+65966004,4,count:medications:904419,Alendronic acid 10 MG Oral Tablet,0.0605
+65966004,5,count:conditions:444814009,Viral sinusitis (disorder),0.0542
+65966004,6,count:imaging_studies:DX|51185008,Digital Radiography | Chest,0.0542
+65966004,7,count:imaging_studies:DX|72696002,Digital Radiography | Knee,0.0517
+65966004,8,recent:conditions:64859006,Osteoporosis (disorder),0.0503
+65966004,9,age_years,,0.0464
+65966004,10,count:conditions:359817006,Closed fracture of hip,0.0407
+126906006,1,recent:procedures:410006001,Digital examination of rectum,0.132
+126906006,2,recent:observations:32465-7,Physical findings of Prostate,0.132
+126906006,3,recent:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.132
+126906006,4,age_band_50_65,,0.1216
+126906006,5,count:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.11
+126906006,6,count:procedures:410006001,Digital examination of rectum,0.11
+126906006,7,count:observations:32465-7,Physical findings of Prostate,0.11
+126906006,8,count:conditions:7200002,Alcoholism,0.0829
+126906006,9,sex_male,,0.0737
+126906006,10,count:procedures:73761001,Colonoscopy,0.0642
+271737000,1,recent:careplans:698360004,Diabetes self management plan,0.0889
+271737000,2,recent:conditions:15777000,Prediabetes,0.0774
+271737000,3,count:procedures:236974004,Instrumental delivery,0.0657
+271737000,4,recent:medications:389221,Etonogestrel 68 MG Drug Implant,0.0619
+271737000,5,recent:medications:1043400,Acetaminophen 21.7 MG/ML / Dextromethorphan Hydrobromide 1 MG/ML / doxylamine succinate 0.417 MG/ML Oral Solution,0.0549
+271737000,6,recent:conditions:201834006,Localized  primary osteoarthritis of the hand,0.052
+271737000,7,count:imaging_studies:DX|51299004,Digital Radiography | Clavicle,0.0515
+271737000,8,age_band_18_35,,0.0507
+271737000,9,count:conditions:198992004,Antepartum eclampsia,0.0473
+271737000,10,recent:medications:309097,Cefuroxime 250 MG Oral Tablet,0.0448
+64859006,1,age_band_65_80,,0.1287
+64859006,2,age_years,,0.0759
+64859006,3,recent:encounters:305411003,Admission to thoracic surgery department,0.0665
+64859006,4,count:allergies:91935009,Allergy to peanuts,0.0548
+64859006,5,recent:procedures:112790001,Nasal sinus endoscopy (procedure),0.0513
+64859006,6,count:conditions:24079001,Atopic dermatitis,0.0463
+64859006,7,count:medications:1049221,Acetaminophen 325 MG / oxyCODONE Hydrochloride 5 MG Oral Tablet,0.045
+64859006,8,count:conditions:97331000119101,Macular edema and retinopathy due to type 2 diabetes mellitus (disorder),0.045
+64859006,9,count:medications:849574,Naproxen sodium 220 MG Oral Tablet,0.0443
+64859006,10,count:encounters:305411003,Admission to thoracic surgery department,0.0432
+443165006,1,count:conditions:64859006,Osteoporosis (disorder),0.2953
+443165006,2,count:medications:904419,Alendronic acid 10 MG Oral Tablet,0.1385
+443165006,3,age_years,,0.0887
+443165006,4,age_band_80_max,,0.0751
+443165006,5,count:procedures:312681000,Bone density scan (procedure),0.0563
+443165006,6,recent:conditions:64859006,Osteoporosis (disorder),0.0502
+443165006,7,recent:careplans:736690008,Dialysis care plan (record artifact),0.0472
+443165006,8,count:observations:38265-5,DXA [T-score] Bone density,0.0472
+443165006,9,count:encounters:230690007,Stroke,0.0468
+443165006,10,age_band_65_80,,0.0454
+49436004,1,age_years,,0.092
+49436004,2,age_band_65_80,,0.0736
+49436004,3,age_band_80_max,,0.0556
+49436004,4,count:conditions:162864005,Body mass index 30+ - obesity (finding),0.0537
+49436004,5,recent:encounters:56876005,Drug rehabilitation and detoxification,0.0497
+49436004,6,count:conditions:1501000119109,Proliferative diabetic retinopathy due to type II diabetes mellitus (disorder),0.0474
+49436004,7,count:allergies:420174000,Allergy to wheat,0.0448
+49436004,8,count:allergies:300913006,Shellfish allergy,0.0444
+49436004,9,recent:conditions:239872002,Osteoarthritis of hip,0.0412
+49436004,10,count:conditions:363406005,Malignant tumor of colon,0.0385
+92691004,1,recent:procedures:410006001,Digital examination of rectum,0.12
+92691004,2,recent:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.12
+92691004,3,recent:observations:32465-7,Physical findings of Prostate,0.12
+92691004,4,count:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.1039
+92691004,5,count:procedures:410006001,Digital examination of rectum,0.1039
+92691004,6,count:observations:32465-7,Physical findings of Prostate,0.1039
+92691004,7,age_band_50_65,,0.0939
+92691004,8,count:conditions:7200002,Alcoholism,0.0729
+92691004,9,count:procedures:73761001,Colonoscopy,0.0635
+92691004,10,sex_male,,0.0612
+36971009,1,count:procedures:269911007,Sputum examination (procedure),0.0561
+36971009,2,count:immunizations:33,pneumococcal polysaccharide vaccine  23 valent,0.0544
+36971009,3,count:allergies:300913006,Shellfish allergy,0.0523
+36971009,4,recent:conditions:90560007,Gout,0.0466
+36971009,5,count:conditions:35999006,Blighted ovum,0.0429
+36971009,6,recent:procedures:169553002,Insertion of subcutaneous contraceptive,0.041
+36971009,7,recent:medications:748962,Camila 28 Day Pack,0.0405
+36971009,8,count:medications:831533,Errin 28 Day Pack,0.0398
+36971009,9,recent:conditions:201834006,Localized  primary osteoarthritis of the hand,0.0397
+36971009,10,recent:conditions:156073000,Fetus with unknown complication,0.0376
+75498004,1,recent:conditions:70704007,Sprain of wrist,0.0738
+75498004,2,recent:conditions:275272006,Brain damage - traumatic,0.0703
+75498004,3,recent:conditions:39848009,Whiplash injury to neck,0.0702
+75498004,4,count:conditions:197927001,Recurrent urinary tract infection,0.0543
+75498004,5,count:allergies:419263009,Allergy to tree pollen,0.0517
+75498004,6,count:medications:477045,Chlorpheniramine Maleate 2 MG/ML Oral Solution,0.0516
+75498004,7,recent:conditions:156073000,Fetus with unknown complication,0.051
+75498004,8,count:procedures:432231006,Fine needle aspiration biopsy of lung (procedure),0.0498
+75498004,9,recent:procedures:432231006,Fine needle aspiration biopsy of lung (procedure),0.0498
+75498004,10,recent:careplans:736690008,Dialysis care plan (record artifact),0.048
+162573006,1,count:conditions:5602001,Opioid abuse (disorder),0.089
+162573006,2,count:medications:752899,0.25 ML Leuprolide Acetate 30 MG/ML Prefilled Syringe,0.0642
+162573006,3,count:conditions:126906006,Neoplasm of prostate,0.0642
+162573006,4,count:careplans:736252007,Cancer care plan,0.0642
+162573006,5,count:conditions:92691004,Carcinoma in situ of prostate (disorder),0.0642
+162573006,6,count:medications:1860480,1 ML DOCEtaxel 20 MG/ML Injection,0.0642
+162573006,7,count:careplans:408869004,Musculoskeletal care,0.0505
+162573006,8,recent:observations:32465-7,Physical findings of Prostate,0.0494
+162573006,9,recent:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.0494
+162573006,10,recent:procedures:410006001,Digital examination of rectum,0.0494
+424132000,1,count:conditions:5602001,Opioid abuse (disorder),0.0919
+424132000,2,count:medications:752899,0.25 ML Leuprolide Acetate 30 MG/ML Prefilled Syringe,0.0639
+424132000,3,count:medications:1860480,1 ML DOCEtaxel 20 MG/ML Injection,0.0639
+424132000,4,count:conditions:92691004,Carcinoma in situ of prostate (disorder),0.0639
+424132000,5,count:conditions:126906006,Neoplasm of prostate,0.0639
+424132000,6,count:careplans:736252007,Cancer care plan,0.0639
+424132000,7,count:careplans:734163000,Care Plan,0.0547
+424132000,8,count:careplans:408869004,Musculoskeletal care,0.0519
+424132000,9,count:medications:1049221,Acetaminophen 325 MG / oxyCODONE Hydrochloride 5 MG Oral Tablet,0.0504
+424132000,10,recent:careplans:737471002,Minor surgery care management (procedure),0.0486
+254637007,1,count:conditions:5602001,Opioid abuse (disorder),0.0922
+254637007,2,count:medications:1860480,1 ML DOCEtaxel 20 MG/ML Injection,0.0643
+254637007,3,count:conditions:92691004,Carcinoma in situ of prostate (disorder),0.0643
+254637007,4,count:medications:752899,0.25 ML Leuprolide Acetate 30 MG/ML Prefilled Syringe,0.0643
+254637007,5,count:careplans:736252007,Cancer care plan,0.0643
+254637007,6,count:conditions:126906006,Neoplasm of prostate,0.0643
+254637007,7,count:careplans:734163000,Care Plan,0.0552
+254637007,8,count:careplans:408869004,Musculoskeletal care,0.0532
+254637007,9,recent:careplans:737471002,Minor surgery care management (procedure),0.0484
+254637007,10,count:medications:749882,Norinyl 1+50 28 Day Pack,0.0479
+39848009,1,count:medications:1049630,diphenhydrAMINE Hydrochloride 25 MG Oral Tablet,0.0613
+39848009,2,recent:encounters:32485007,Hospital admission,0.057
+39848009,3,recent:immunizations:115,Tdap,0.0541
+39848009,4,recent:conditions:398254007,Preeclampsia,0.0518
+39848009,5,count:conditions:8011004,Dysarthria (finding),0.0513
+39848009,6,count:conditions:95417003,Primary fibromyalgia syndrome,0.0502
+39848009,7,count:careplans:134435003,Routine antenatal care,0.0482
+39848009,8,recent:immunizations:52,Hep A  adult,0.047
+39848009,9,recent:conditions:201834006,Localized  primary osteoarthritis of the hand,0.0461
+39848009,10,count:procedures:76164006,Biopsy of colon,0.0456
+26929004,1,age_band_65_80,,0.116
+26929004,2,count:procedures:241601008,Magnetic resonance imaging of head (procedure),0.0846
+26929004,3,count:procedures:241517007,CT of head (procedure),0.0793
+26929004,4,age_years,,0.057
+26929004,5,count:careplans:384758001,Self-care interventions (procedure),0.0493
+26929004,6,count:allergies:417532002,Allergy to fish,0.0476
+26929004,7,count:conditions:449868002,Smokes tobacco daily,0.0472
+26929004,8,count:medications:198031,24hr nicotine transdermal patch,0.0466
+26929004,9,count:devices:706004007,Implantable cardiac pacemaker (physical object),0.0454
+26929004,10,count:imaging_studies:MR|69536005,Magnetic Resonance | Head structure (body structure),0.0452
+263102004,1,count:conditions:195662009,Acute viral pharyngitis (disorder),0.0481
+263102004,2,count:careplans:736254008,Psychiatry care plan,0.0476
+263102004,3,recent:careplans:736690008,Dialysis care plan (record artifact),0.0468
+263102004,4,count:medications:313185,Tacrine 10 MG Oral Capsule,0.0452
+263102004,5,recent:encounters:32485007,Hospital admission,0.0449
+263102004,6,count:medications:308192,Amoxicillin 500 MG Oral Tablet,0.044
+263102004,7,age_years,,0.0404
+263102004,8,count:observations:8310-5,Body temperature,0.0389
+263102004,9,count:conditions:95417003,Primary fibromyalgia syndrome,0.0371
+263102004,10,count:encounters:169762003,Postnatal visit,0.0344
+72892002,1,count:medications:749762,Seasonique 91 Day Pack,0.1171
+72892002,2,count:encounters:698314001,Consultation for treatment,0.1045
+72892002,3,count:medications:748856,Yaz 28 Day Pack,0.0867
+72892002,4,recent:encounters:698314001,Consultation for treatment,0.0756
+72892002,5,count:observations:59576-9,Body mass index (BMI) [Percentile] Per age and gender,0.0734
+72892002,6,count:medications:978950,Natazia 28 Day Pack,0.0702
+72892002,7,count:medications:235389,Mestranol / Norethynodrel [Enovid],0.064
+72892002,8,recent:observations:59576-9,Body mass index (BMI) [Percentile] Per age and gender,0.0618
+72892002,9,count:medications:1534809,168 HR Ethinyl Estradiol 0.00146 MG/HR / norelgestromin 0.00625 MG/HR Transdermal System,0.0575
+72892002,10,count:medications:389221,Etonogestrel 68 MG Drug Implant,0.0572
+713197008,1,count:procedures:73761001,Colonoscopy,0.1198
+713197008,2,age_band_50_65,,0.0726
+713197008,3,recent:observations:33756-8,Polyp size greatest dimension by CAP cancer protocols,0.0514
+713197008,4,recent:conditions:68496003,Polyp of colon,0.0514
+713197008,5,recent:procedures:104435004,Screening for occult blood in feces (procedure),0.0514
+713197008,6,recent:observations:57905-2,Hemoglobin.gastrointestinal [Presence] in Stool by Immunologic method,0.0514
+713197008,7,recent:encounters:183478001,Emergency hospital admission for asthma,0.0496
+713197008,8,recent:careplans:736690008,Dialysis care plan (record artifact),0.0486
+713197008,9,count:conditions:68496003,Polyp of colon,0.0411
+713197008,10,recent:procedures:274031008,Rectal polypectomy,0.0395
+62106007,1,count:conditions:408512008,Body mass index 40+ - severely obese (finding),0.0738
+62106007,2,recent:careplans:736690008,Dialysis care plan (record artifact),0.0476
+62106007,3,recent:procedures:269911007,Sputum examination (procedure),0.0465
+62106007,4,recent:procedures:112790001,Nasal sinus endoscopy (procedure),0.0433
+62106007,5,recent:procedures:46706006,Replacement of contraceptive intrauterine device,0.041
+62106007,6,recent:conditions:80394007,Hyperglycemia (disorder),0.0403
+62106007,7,count:procedures:19490002,Ankle X-ray,0.0391
+62106007,8,count:conditions:16114001,Fracture of ankle,0.0374
+62106007,9,count:conditions:703151001,History of single seizure (situation),0.0363
+62106007,10,count:conditions:128613002,Seizure disorder,0.0363
+15777000,1,recent:medications:748962,Camila 28 Day Pack,0.0686
+15777000,2,recent:conditions:201834006,Localized  primary osteoarthritis of the hand,0.0686
+15777000,3,recent:conditions:162864005,Body mass index 30+ - obesity (finding),0.0512
+15777000,4,age_band_35_50,,0.0469
+15777000,5,age_band_18_35,,0.0449
+15777000,6,recent:medications:389221,Etonogestrel 68 MG Drug Implant,0.0425
+15777000,7,recent:medications:749882,Norinyl 1+50 28 Day Pack,0.0395
+15777000,8,recent:procedures:23426006,Measurement of respiratory function (procedure),0.039
+15777000,9,recent:medications:1043400,Acetaminophen 21.7 MG/ML / Dextromethorphan Hydrobromide 1 MG/ML / doxylamine succinate 0.417 MG/ML Oral Solution,0.0387
+15777000,10,recent:encounters:698314001,Consultation for treatment,0.0366
+58150001,1,age_band_65_80,,0.0595
+58150001,2,count:conditions:239873007,Osteoarthritis of knee,0.0509
+58150001,3,recent:procedures:76164006,Biopsy of colon,0.0465
+58150001,4,recent:conditions:201834006,Localized  primary osteoarthritis of the hand,0.0459
+58150001,5,recent:medications:389221,Etonogestrel 68 MG Drug Implant,0.0436
+58150001,6,recent:conditions:93761005,Primary malignant neoplasm of colon,0.0432
+58150001,7,count:conditions:284551006,Laceration of foot,0.0417
+58150001,8,recent:conditions:8011004,Dysarthria (finding),0.0385
+58150001,9,age_years,,0.037
+58150001,10,count:medications:857005,Acetaminophen 325 MG / HYDROcodone Bitartrate 7.5 MG Oral Tablet,0.0352
+162864005,1,age_band_35_50,,0.0912
+162864005,2,recent:medications:751905,Trinessa 28 Day Pack,0.0478
+162864005,3,recent:medications:2001499,Vitamin B 12 5 MG/ML Injectable Solution,0.0462
+162864005,4,age_band_18_35,,0.0418
+162864005,5,recent:encounters:183478001,Emergency hospital admission for asthma,0.0405
+162864005,6,count:allergies:417532002,Allergy to fish,0.038
+162864005,7,count:immunizations:114,meningococcal MCV4P,0.0368
+162864005,8,recent:encounters:305411003,Admission to thoracic surgery department,0.0364
+162864005,9,recent:conditions:703151001,History of single seizure (situation),0.0364
+162864005,10,recent:conditions:128613002,Seizure disorder,0.0364
+16114001,1,count:conditions:275272006,Brain damage - traumatic,0.0714
+16114001,2,recent:careplans:737471002,Minor surgery care management (procedure),0.0549
+16114001,3,recent:medications:313185,Tacrine 10 MG Oral Capsule,0.0488
+16114001,4,recent:conditions:55680006,Drug overdose,0.0485
+16114001,5,recent:conditions:62564004,Concussion with loss of consciousness,0.0474
+16114001,6,count:medications:310385,FLUoxetine 20 MG Oral Capsule,0.0443
+16114001,7,count:observations:88040-1,Response to cancer treatment,0.0433
+16114001,8,recent:conditions:93761005,Primary malignant neoplasm of colon,0.0432
+16114001,9,age_band_65_80,,0.0423
+16114001,10,recent:careplans:736690008,Dialysis care plan (record artifact),0.0397
+70704007,1,recent:conditions:1501000119109,Proliferative diabetic retinopathy due to type II diabetes mellitus (disorder),0.0783
+70704007,2,recent:conditions:65363002,Otitis media,0.0553
+70704007,3,recent:medications:313820,Acetaminophen 160 MG Chewable Tablet,0.0532
+70704007,4,recent:medications:235389,Mestranol / Norethynodrel [Enovid],0.0469
+70704007,5,count:medications:313820,Acetaminophen 160 MG Chewable Tablet,0.045
+70704007,6,count:medications:309097,Cefuroxime 250 MG Oral Tablet,0.0424
+70704007,7,recent:procedures:237001001,Augmentation of labor,0.0413
+70704007,8,recent:medications:749882,Norinyl 1+50 28 Day Pack,0.0399
+70704007,9,count:procedures:18946005,Epidural anesthesia,0.0382
+70704007,10,count:medications:749882,Norinyl 1+50 28 Day Pack,0.0358
+283371005,1,recent:medications:308192,Amoxicillin 500 MG Oral Tablet,0.0669
+283371005,2,count:medications:308192,Amoxicillin 500 MG Oral Tablet,0.0557
+283371005,3,recent:procedures:65588006,Premature birth of newborn,0.0547
+283371005,4,count:allergies:424213003,Allergy to bee venom,0.0481
+283371005,5,count:medications:477045,Chlorpheniramine Maleate 2 MG/ML Oral Solution,0.0472
+283371005,6,count:careplans:711282006,Skin condition care,0.0393
+283371005,7,count:medications:197319,Allopurinol 100 MG Oral Tablet,0.0383
+283371005,8,count:conditions:233678006,Childhood asthma,0.0381
+283371005,9,recent:conditions:237602007,Metabolic syndrome X (disorder),0.0376
+283371005,10,recent:conditions:302870006,Hypertriglyceridemia (disorder),0.0367
+314994000,1,recent:procedures:410006001,Digital examination of rectum,0.0941
+314994000,2,recent:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.0941
+314994000,3,recent:observations:32465-7,Physical findings of Prostate,0.0941
+314994000,4,age_band_50_65,,0.0868
+314994000,5,count:observations:32465-7,Physical findings of Prostate,0.072
+314994000,6,count:procedures:410006001,Digital examination of rectum,0.072
+314994000,7,count:observations:2857-1,Prostate specific Ag [Mass/volume] in Serum or Plasma,0.072
+314994000,8,count:medications:308971,Carbamazepine[Tegretol],0.0629
+314994000,9,recent:conditions:82423001,Chronic pain,0.0605
+314994000,10,sex_male,,0.0501
+284551006,1,count:conditions:7200002,Alcoholism,0.0679
+284551006,2,recent:procedures:384700001,Injection of tetanus antitoxin,0.0518
+284551006,3,count:procedures:73761001,Colonoscopy,0.0467
+284551006,4,count:conditions:70704007,Sprain of wrist,0.0466
+284551006,5,recent:observations:88040-1,Response to cancer treatment,0.0414
+284551006,6,recent:procedures:269911007,Sputum examination (procedure),0.0355
+284551006,7,count:conditions:87433001,Pulmonary emphysema (disorder),0.0353
+284551006,8,count:procedures:65588006,Premature birth of newborn,0.0349
+284551006,9,recent:medications:310965,Ibuprofen 200 MG Oral Tablet,0.0345
+284551006,10,recent:procedures:68254000,Removal of intrauterine device,0.0342
+22325002,1,count:medications:308136,amLODIPine 2.5 MG Oral Tablet,0.0626
+22325002,2,recent:medications:308136,amLODIPine 2.5 MG Oral Tablet,0.0535
+22325002,3,age_years,,0.0511
+22325002,4,count:encounters:162673000,General examination of patient (procedure),0.0405
+22325002,5,count:allergies:300916003,Latex allergy,0.0401
+22325002,6,count:conditions:408512008,Body mass index 40+ - severely obese (finding),0.0373
+22325002,7,count:careplans:443402002,Lifestyle education regarding hypertension,0.0371
+22325002,8,count:conditions:59621000,Hypertension,0.0371
+22325002,9,count:medications:834357,3 ML Amiodarone hydrocholoride 50 MG/ML Prefilled Syringe,0.0341
+22325002,10,count:medications:1660014,1 ML Epinephrine 1 MG/ML Injection,0.0341
+723857007,1,count:medications:308136,amLODIPine 2.5 MG Oral Tablet,0.0626
+723857007,2,recent:medications:308136,amLODIPine 2.5 MG Oral Tablet,0.0535
+723857007,3,age_years,,0.0511
+723857007,4,count:encounters:162673000,General examination of patient (procedure),0.0405
+723857007,5,count:allergies:300916003,Latex allergy,0.0401
+723857007,6,count:conditions:408512008,Body mass index 40+ - severely obese (finding),0.0373
+723857007,7,count:careplans:443402002,Lifestyle education regarding hypertension,0.0371
+723857007,8,count:conditions:59621000,Hypertension,0.0371
+723857007,9,count:medications:834357,3 ML Amiodarone hydrocholoride 50 MG/ML Prefilled Syringe,0.0341
+723857007,10,count:medications:1660014,1 ML Epinephrine 1 MG/ML Injection,0.0341
+156073000,1,recent:immunizations:52,Hep A  adult,0.0842
+156073000,2,recent:procedures:65200003,Insertion of intrauterine contraceptive device,0.0743
+156073000,3,recent:conditions:79586000,Tubal pregnancy,0.0594
+156073000,4,recent:medications:807283,Mirena 52 MG Intrauterine System,0.0582
+156073000,5,count:medications:748962,Camila 28 Day Pack,0.0547
+156073000,6,recent:medications:748962,Camila 28 Day Pack,0.054
+156073000,7,count:procedures:65200003,Insertion of intrauterine contraceptive device,0.0514
+156073000,8,count:medications:807283,Mirena 52 MG Intrauterine System,0.0491
+156073000,9,count:encounters:698314001,Consultation for treatment,0.0466
+156073000,10,recent:conditions:198992004,Antepartum eclampsia,0.0463

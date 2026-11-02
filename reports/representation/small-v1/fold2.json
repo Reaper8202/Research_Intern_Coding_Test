@@ -1,0 +1,242 @@
+{
+  "M1_refill_gaps_fit": {
+    "exactly_0": 151436,
+    "no_later_start": 2820,
+    "other_stops": 154858,
+    "over_0_to_1": 0,
+    "over_1_to_2": 0,
+    "over_2_to_7": 14,
+    "over_30_to_365": 284,
+    "over_365_to_inf": 233,
+    "over_7_to_30": 71,
+    "zero_length_stops": 10261
+  },
+  "M8_pretraining": {
+    "history_tokens": 616861,
+    "optimizer_steps_per_epoch": 70,
+    "patients_with_history": 2233,
+    "patients_with_several_window_starts": 103,
+    "window_starts_max": 962,
+    "windows_per_epoch": 2233
+  },
+  "config": "small-v1",
+  "fit": {
+    "days_since_last_event": {
+      "max": 12164.0,
+      "median": 31.0,
+      "min": 1.0,
+      "p90": 223.0,
+      "p99": 510.04
+    },
+    "density_tertile_edges": [
+      3.57,
+      6.61
+    ],
+    "empty_histories": 0,
+    "event_tokens_lost_fraction": 0.1792,
+    "history_tokens": {
+      "max": 7525.0,
+      "median": 172.0,
+      "min": 4.0,
+      "p90": 363.0,
+      "p99": 1779.44
+    },
+    "lost_fraction_by_source": {
+      "allergies": 0.0199,
+      "careplans": 0.049,
+      "conditions": 0.0713,
+      "devices": 0.0407,
+      "encounters": 0.2532,
+      "imaging_studies": 0.0539,
+      "immunizations": 0.0137,
+      "medications": 0.4124,
+      "observations": 0.1484,
+      "procedures": 0.217
+    },
+    "n_patients": 2233,
+    "partial_day_patients": 0,
+    "positives_by_group": {
+      "density_high": {
+        "label_positives": 1256,
+        "patients": 744
+      },
+      "density_low": {
+        "label_positives": 1485,
+        "patients": 745
+      },
+      "density_middle": {
+        "label_positives": 1453,
+        "patients": 744
+      },
+      "empty": {
+        "label_positives": 0,
+        "patients": 0
+      },
+      "not_truncated": {
+        "label_positives": 3980,
+        "patients": 2130
+      },
+      "truncated": {
+        "label_positives": 214,
+        "patients": 103
+      }
+    },
+    "sequence_length": {
+      "max": 1024.0,
+      "median": 174.0,
+      "min": 6.0,
+      "p90": 365.0,
+      "p99": 1024.0
+    },
+    "summary_at_cap": 0,
+    "summary_coverage": 1.0,
+    "summary_tokens": {
+      "max": 23.0,
+      "median": 0.0,
+      "min": 0.0,
+      "p90": 0.0,
+      "p99": 17.0
+    },
+    "truncated_fraction": 0.0461,
+    "truncated_history_years_median": 63.62,
+    "truncated_patients": 103,
+    "truncated_retained_years_median": 3.87,
+    "unknown_rate_by_source": {
+      "allergies": 0.00993,
+      "careplans": 0.00109,
+      "conditions": 0.00303,
+      "devices": 0.00581,
+      "encounters": 0.00246,
+      "imaging_studies": 0.0,
+      "immunizations": 0.00036,
+      "medications": 0.0039,
+      "observations": 0.0001,
+      "procedures": 0.00802
+    }
+  },
+  "fit_patients": 2233,
+  "fold": 2,
+  "held": {
+    "days_since_last_event": {
+      "max": 882.0,
+      "median": 29.0,
+      "min": 1.0,
+      "p90": 217.0,
+      "p99": 346.01
+    },
+    "density_tertile_edges": [
+      3.62,
+      6.59
+    ],
+    "empty_histories": 0,
+    "event_tokens_lost_fraction": 0.1227,
+    "history_tokens": {
+      "max": 6745.0,
+      "median": 174.5,
+      "min": 18.0,
+      "p90": 354.0,
+      "p99": 1697.72
+    },
+    "lost_fraction_by_source": {
+      "allergies": 0.0068,
+      "careplans": 0.0527,
+      "conditions": 0.0748,
+      "devices": 0.0541,
+      "encounters": 0.235,
+      "imaging_studies": 0.0691,
+      "immunizations": 0.011,
+      "medications": 0.272,
+      "observations": 0.0872,
+      "procedures": 0.0951
+    },
+    "n_patients": 558,
+    "partial_day_patients": 0,
+    "positives_by_group": {
+      "density_high": {
+        "label_positives": 320,
+        "patients": 186
+      },
+      "density_low": {
+        "label_positives": 360,
+        "patients": 186
+      },
+      "density_middle": {
+        "label_positives": 340,
+        "patients": 186
+      },
+      "empty": {
+        "label_positives": 0,
+        "patients": 0
+      },
+      "not_truncated": {
+        "label_positives": 952,
+        "patients": 533
+      },
+      "truncated": {
+        "label_positives": 68,
+        "patients": 25
+      }
+    },
+    "sequence_length": {
+      "max": 1024.0,
+      "median": 176.5,
+      "min": 20.0,
+      "p90": 356.0,
+      "p99": 1024.0
+    },
+    "summary_at_cap": 0,
+    "summary_coverage": 1.0,
+    "summary_tokens": {
+      "max": 23.0,
+      "median": 0.0,
+      "min": 0.0,
+      "p90": 0.0,
+      "p99": 16.0
+    },
+    "truncated_fraction": 0.0448,
+    "truncated_history_years_median": 70.53,
+    "truncated_patients": 25,
+    "truncated_retained_years_median": 4.1,
+    "unknown_rate_by_source": {
+      "allergies": 0.01351,
+      "careplans": 0.00151,
+      "conditions": 0.0014,
+      "devices": 0.0,
+      "encounters": 0.00677,
+      "imaging_studies": 0.0,
+      "immunizations": 0.00142,
+      "medications": 0.00745,
+      "observations": 2e-05,
+      "procedures": 0.00601
+    }
+  },
+  "held_patients": 558,
+  "refill_pairs_merged_fit": 151436,
+  "tokenizer_sha256": "ca2a9699f325ea6b90fc24492007f277effcc17fadfd266652750c00afef338a",
+  "vocabulary": {
+    "eligible_base_codes": 589,
+    "numeric_bins_fallback": 5,
+    "numeric_bins_total": 670,
+    "numeric_groups": 103,
+    "numeric_groups_all_fallback": 4,
+    "size": 1842,
+    "text_values": 52,
+    "tokens_by_kind": {
+      "[PAD": 1,
+      "[SEP": 1,
+      "[SEX": 2,
+      "[UNK": 10,
+      "allergies": 28,
+      "careplans": 62,
+      "cond": 244,
+      "devices": 6,
+      "enc": 46,
+      "hx": 122,
+      "img": 12,
+      "imm": 11,
+      "med": 198,
+      "obs": 979,
+      "proc": 120
+    }
+  }
+}

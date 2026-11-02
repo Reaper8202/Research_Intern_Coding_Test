@@ -1,0 +1,18 @@
+{
+  "generation_runs": 0,
+  "reason": "Required target starts have no permitted pre-anchor training examples.",
+  "status": "deferred",
+  "supervised_outputs": 40,
+  "unsupported_targets": [
+    {
+      "code": "233604007",
+      "preanchor_patients": 0,
+      "supervised_positives": 133
+    },
+    {
+      "code": "314994000",
+      "preanchor_patients": 0,
+      "supervised_positives": 50
+    }
+  ]
+}
