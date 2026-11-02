@@ -147,6 +147,7 @@ def run(
             input_sha256=events_manifest,
             genomics=modalities.genomics if modalities is not None and genomics_on else None,
             imaging=imaging_on,
+            exclude_observations=rep.get("exclude_observations", ()),
         )
         histories = build_histories(tokenizer.encode(events), cohort, tokenizer, codes, modalities)
         directory = fold_dir(models_dir, config, fold)

@@ -1,0 +1,46 @@
+# Round 2 (plan revision 2.5, D36). Written on 2 November 2026 before any score of these runs.
+# Derek asked for model improvement within the assessment rules, and for a self-audit.
+#
+# Evidence for this round, from training data only:
+# * DALY, QALY, and QOLS are simulator scores recorded yearly from 2011. Code counts predict an
+#   anchor before 2015 with AUROC 0.999, and 1,155 of those 1,219 training patients died.
+# * Those patients have more new diagnoses (2.37 against 1.48 per patient). So the codes let a
+#   model read how the anchor was built. LightGBM falls from 0.773 to 0.762 AUROC without them.
+# * Fine-tuning overfits; dropout 0.3 was the top of the tested range.
+# * The head reads only the last event; the largest LightGBM gaps are on count-driven conditions.
+#
+# Exclusion is a validity correction under D3 and D10, so it does not depend on the score. A0 and
+# A1 measure its cost. All other experiments use the section 5.3 rule against their reference.
+# Official val is not read.
+#
+# Planned next, each appended here before its scores: extra supervised anchors (E3), full-timeline
+# pretraining (reverses D16, so adoption needs Derek's approval), one combination, and seeds of
+# the final configuration for a measured ensemble.
+
+incumbent = "configs/experiments/mm_dropout03.toml"
+method = "F"
+compute_ceiling_hours = 14
+combination_slots = 1
+
+[[experiment]]
+id = "A0-clean-base"
+config = "configs/v2_base.toml"
+reference = "configs/multimodal.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "A1-clean-dropout03"
+config = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "A2-dropout05"
+config = "configs/experiments/v2_do05.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "A3-pooled-readout"
+config = "configs/experiments/v2_pool.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]

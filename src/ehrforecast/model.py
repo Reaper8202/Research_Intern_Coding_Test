@@ -6,6 +6,8 @@
   symbols (padding, structure, and summary tokens) are removed from the output distribution.
 * Prediction head: the last clinical-event state, joined with the head features, then dropout and
   one linear layer with 40 logits. A patient without clinical events gets a zero state.
+* Optional readout ``last_mean`` (D36 round): the last-event state joined with the mean state of
+  all clinical events, so the head also sees a summary of the whole retained history.
 * Image encoder (D34, only when the tokenizer has ``[IMG]``): a four-layer 3-D CNN from random
   weights maps a standardized brain volume to one ``d_model`` vector. That vector replaces the
   ``[IMG]`` token embedding, so the image enters attention like any other input token.
@@ -40,10 +42,13 @@ class ModelConfig:
     n_head_features: int = 4
     rope_base: float = 10_000.0
     image_token_id: int = -1  # -1: no image encoder
+    readout: str = "last"  # "last" or "last_mean"
 
     def __post_init__(self) -> None:
         if self.d_model % self.n_heads or (self.d_model // self.n_heads) % 2:
             raise ValueError("d_model / n_heads must be an even integer for RoPE")
+        if self.readout not in {"last", "last_mean"}:
+            raise ValueError(f"unknown readout {self.readout}")
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -115,7 +120,8 @@ class EHRTransformer(nn.Module):
         self.blocks = nn.ModuleList(Block(config) for _ in range(config.n_layers))
         self.ln_final = nn.LayerNorm(d)
         self.head_dropout = nn.Dropout(config.head_dropout)
-        self.classifier = nn.Linear(d + config.n_head_features, config.n_targets)
+        state_size = 2 * d if config.readout == "last_mean" else d
+        self.classifier = nn.Linear(state_size + config.n_head_features, config.n_targets)
         self.image_encoder = ImageEncoder(d, config.dropout) if config.image_token_id >= 0 else None
         mask = torch.zeros(config.vocab_size, dtype=torch.bool)
         if input_only_ids is not None:
@@ -172,12 +178,22 @@ class EHRTransformer(nn.Module):
         return logits.masked_fill(self.output_mask, float("-inf"))
 
     def classify(
-        self, states: torch.Tensor, readout: torch.Tensor, head_features: torch.Tensor
+        self,
+        states: torch.Tensor,
+        readout: torch.Tensor,
+        head_features: torch.Tensor,
+        event_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Read the last clinical event (zero state when ``readout`` is -1); return 40 logits."""
         rows = torch.arange(states.shape[0], device=states.device)
         picked = states[rows, readout.clamp(min=0)]
         picked = picked * (readout >= 0).unsqueeze(1).to(picked.dtype)
+        if self.config.readout == "last_mean":
+            if event_mask is None:
+                raise ValueError("the last_mean readout needs the event mask")
+            weights = event_mask.unsqueeze(2).to(states.dtype)
+            mean = (states * weights).sum(dim=1) / weights.sum(dim=1).clamp(min=1.0)
+            picked = torch.cat([picked, mean], dim=1)
         return self.classifier(self.head_dropout(torch.cat([picked, head_features], dim=1)))
 
     def forward(
@@ -187,5 +203,7 @@ class EHRTransformer(nn.Module):
         readout: torch.Tensor,
         head_features: torch.Tensor,
         images: torch.Tensor | None = None,
+        event_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        return self.classify(self.hidden(tokens, ages, images), readout, head_features)
+        states = self.hidden(tokens, ages, images)
+        return self.classify(states, readout, head_features, event_mask)

@@ -89,6 +89,7 @@ def model_config(config: dict[str, Any], tokenizer: FoldTokenizer, n_targets: in
         head_dropout=float(m["head_dropout"]),
         n_targets=n_targets,
         n_head_features=sequence_config(config).n_head_features,
+        readout=str(m.get("readout", "last")),
         image_token_id=tokenizer.token_id(IMG) if tokenizer.imaging else -1,
     )
 
@@ -171,6 +172,8 @@ def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold:
         float(rep["refill_gap_days"]),
     ):
         raise ValueError("the fold tokenizer and the configuration use different token rules")
+    if tokenizer.excluded_observations != frozenset(rep.get("exclude_observations", ())):
+        raise ValueError("the fold tokenizer and the configuration exclude different observations")
     genomics, imaging, _ = modality_settings(config)
     if (tokenizer.genomics, tokenizer.imaging) != (genomics, imaging):
         raise ValueError("the fold tokenizer and the configuration use different modalities")
@@ -232,12 +235,14 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
     ages = np.zeros((n, width), dtype="float32")
     targets = np.full((n, width), IGNORE, dtype="int64")
     sources = np.full((n, width), -1, dtype="int64")
+    event_mask = np.zeros((n, width), dtype=bool)
     for b, s in enumerate(samples):
         length = len(s.tokens)
         tokens[b, :length], ages[b, :length] = s.tokens, s.ages
         # Position j predicts token j + 1 when token j + 1 is a clinical event.
         targets[b, s.n_prefix - 1 : length - 1] = s.tokens[s.n_prefix :]
         sources[b, s.n_prefix - 1 : length - 1] = s.sources[s.n_prefix :]
+        event_mask[b, s.n_prefix : length] = True
     batch = {
         "tokens": torch.from_numpy(tokens).to(device),
         "ages": torch.from_numpy(age_features(ages)).to(device),
@@ -245,6 +250,7 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
         "target_sources": torch.from_numpy(sources).to(device),
         "readout": torch.tensor([s.readout for s in samples], device=device),
         "head": torch.from_numpy(np.stack([s.head for s in samples])).to(device),
+        "event_mask": torch.from_numpy(event_mask).to(device),
     }
     images = [s.image for s in samples if s.image is not None]
     if images:

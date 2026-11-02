@@ -28,11 +28,14 @@ also need ``min_patients`` fit patients; rarer values and unseen units of an eli
 code map to ``other_value``. Nothing is fitted on descriptions, labels, or held-out patients.
 A genotype token also needs ``min_patients`` fit carriers; rarer genotypes are left out. A
 tokenizer fitted without modalities has the same vocabulary and hash as before D34.
+``exclude_observations`` (D36) removes named observation codes from fitting and from encoding, so
+every split that passes through a saved tokenizer loses them in the same way.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -131,6 +134,16 @@ def compress_refills(events: pd.DataFrame, max_gap_days: float) -> tuple[pd.Data
     return events.drop(index=removed), len(removed) // 2
 
 
+def drop_observations(events: pd.DataFrame, codes: frozenset[str]) -> pd.DataFrame:
+    """Remove observation rows with the given codes (D36). Other sources keep their rows."""
+    if not codes:
+        return events
+    excluded = events["source"].astype(str).eq("observations") & events["code"].astype(str).isin(
+        codes
+    )
+    return events.loc[~excluded]
+
+
 def _base_keys(events: pd.DataFrame) -> pd.Series:
     source = events["source"].astype(str)
     prefix = source.map(PREFIX)
@@ -156,6 +169,7 @@ class FoldTokenizer:
     input_sha256: str
     genomics: bool = False
     imaging: bool = False
+    excluded_observations: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         index = {token: i for i, token in enumerate(self.vocabulary)}
@@ -175,6 +189,7 @@ class FoldTokenizer:
         input_sha256: str = "",
         genomics: pd.DataFrame | None = None,
         imaging: bool = False,
+        exclude_observations: Iterable[str] = (),
     ) -> FoldTokenizer:
         """Fit on fit patients' permitted histories. Other patients' rows are ignored.
 
@@ -182,7 +197,10 @@ class FoldTokenizer:
         ``[IMG]``. Both are fitted on fit patients only.
         """
         validate_ids(fit_patients)
-        fit_events = events.loc[events["patient_id"].isin(fit_patients)]
+        excluded = frozenset(exclude_observations)
+        fit_events = drop_observations(
+            events.loc[events["patient_id"].isin(fit_patients)], excluded
+        )
         fit_events, _ = compress_refills(fit_events, refill_gap_days)
         base = _base_keys(fit_events)
         patients_per_base = fit_events["patient_id"].groupby(base).nunique()
@@ -260,6 +278,7 @@ class FoldTokenizer:
             input_sha256=input_sha256,
             genomics=genomics is not None,
             imaging=imaging,
+            excluded_observations=excluded,
         )
 
     # ------------------------------------------------------------------ lookup
@@ -370,7 +389,8 @@ class FoldTokenizer:
         (the condition code of a known ``cond:start`` row, else empty). Identical tokens on the
         same day are kept once. Source-file row order does not change the result.
         """
-        compressed, _ = compress_refills(events, self.refill_gap_days)
+        permitted = drop_observations(events, self.excluded_observations)
+        compressed, _ = compress_refills(permitted, self.refill_gap_days)
         tokens = self.tokens(compressed)
         source = compressed["source"].astype(str)
         out = pd.DataFrame(
@@ -413,6 +433,11 @@ class FoldTokenizer:
                 if self.genomics or self.imaging
                 else {}
             ),
+            **(
+                {"excluded_observations": sorted(self.excluded_observations)}
+                if self.excluded_observations
+                else {}
+            ),
         }
 
     @property
@@ -444,6 +469,7 @@ class FoldTokenizer:
             input_sha256=data["input_sha256"],
             genomics=bool(data.get("modalities", {}).get("genomics", False)),
             imaging=bool(data.get("modalities", {}).get("imaging", False)),
+            excluded_observations=frozenset(data.get("excluded_observations", ())),
         )
 
 

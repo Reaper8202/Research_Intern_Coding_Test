@@ -6,7 +6,8 @@ in a fresh process. Completed runs are skipped, and an interrupted run resumes f
 completed epoch, so the command can be repeated after any stop.
 
 ``summarize``: compare every experiment with the incumbent fold by fold and apply the section 5.3
-rule. With the E0 seeds present, the rule is also checked against the per-fold mean over seeds,
+rule. An experiment may name its own ``reference`` configuration; the default is the incumbent.
+With the E0 seeds present, the rule is also checked against the per-fold mean over seeds,
 and the seed spread is reported. Writes ``experiments.csv`` and ``experiments.json``. All numbers
 are training-CV; official val is not read.
 
@@ -180,7 +181,14 @@ def summarize(budget_path: Path, models_dir: Path, reports_dir: Path) -> dict[st
         if len(frame):
             row["mean_macro_auroc"] = float(frame["macro_auroc"].mean())
             row["mean_mAP"] = float(frame["mAP"].mean())
-            versus = compare(frame, incumbent)
+            own = experiment.get("reference")
+            reference = (
+                incumbent
+                if own is None
+                else method_scores(models_dir, load_config(Path(own)), method)
+            )
+            versus = compare(frame, reference)
+            row["reference"] = own or budget["incumbent"]
             row.update({f"vs_incumbent_{k}": v for k, v in versus.items() if k != "folds"})
             details[key] = {"vs_incumbent": versus}
             if seed_mean is not None and not key.startswith(SEED_PREFIX):
