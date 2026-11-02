@@ -1,0 +1,41 @@
+code,description,train_positives,train_prevalence,val_positives,val_prevalence
+444814009,Viral sinusitis (disorder),741,0.2655,99,0.2712
+195662009,Acute viral pharyngitis (disorder),591,0.2118,72,0.1973
+10509002,Acute bronchitis (disorder),499,0.1788,61,0.1671
+88805009,Chronic congestive heart failure (disorder),229,0.082,29,0.0795
+230690007,Stroke,206,0.0738,35,0.0959
+22298006,Myocardial Infarction,153,0.0548,19,0.0521
+68496003,Polyp of colon,144,0.0516,18,0.0493
+44465007,Sprain of ankle,141,0.0505,16,0.0438
+53741008,Coronary Heart Disease,137,0.0491,15,0.0411
+233604007,Pneumonia,133,0.0477,17,0.0466
+43878008,Streptococcal sore throat (disorder),133,0.0477,22,0.0603
+65966004,Fracture of forearm,117,0.0419,16,0.0438
+126906006,Neoplasm of prostate,111,0.0398,11,0.0301
+271737000,Anemia (disorder),111,0.0398,15,0.0411
+64859006,Osteoporosis (disorder),98,0.0351,12,0.0329
+443165006,Pathological fracture due to osteoporosis (disorder),94,0.0337,14,0.0384
+49436004,Atrial Fibrillation,92,0.033,14,0.0384
+92691004,Carcinoma in situ of prostate (disorder),88,0.0315,8,0.0219
+36971009,Sinusitis (disorder),88,0.0315,9,0.0247
+75498004,Acute bacterial sinusitis (disorder),88,0.0315,5,0.0137
+162573006,Suspected lung cancer (situation),84,0.0301,10,0.0274
+424132000,Non-small cell carcinoma of lung  TNM stage 1 (disorder),77,0.0276,9,0.0247
+254637007,Non-small cell lung cancer (disorder),76,0.0272,9,0.0247
+39848009,Whiplash injury to neck,75,0.0269,8,0.0219
+26929004,Alzheimer's disease (disorder),75,0.0269,13,0.0356
+263102004,Fracture subluxation of wrist,73,0.0262,10,0.0274
+72892002,Normal pregnancy,70,0.0251,10,0.0274
+713197008,Recurrent rectal polyp,69,0.0247,10,0.0274
+62106007,Concussion with no loss of consciousness,69,0.0247,7,0.0192
+15777000,Prediabetes,61,0.0219,10,0.0274
+58150001,Fracture of clavicle,61,0.0219,8,0.0219
+162864005,Body mass index 30+ - obesity (finding),60,0.0215,11,0.0301
+16114001,Fracture of ankle,58,0.0208,8,0.0219
+70704007,Sprain of wrist,56,0.0201,8,0.0219
+283371005,Laceration of forearm,50,0.0179,7,0.0192
+314994000,Metastasis from malignant tumor of prostate (disorder),50,0.0179,6,0.0164
+284551006,Laceration of foot,45,0.0161,7,0.0192
+22325002,Abnormal gait (finding),41,0.0147,11,0.0301
+723857007,Silent micro-hemorrhage of brain (disorder),41,0.0147,11,0.0301
+156073000,Fetus with unknown complication,29,0.0104,5,0.0137

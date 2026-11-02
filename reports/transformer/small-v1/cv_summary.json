@@ -1,0 +1,523 @@
+{
+  "config": "small-v1",
+  "folds_completed": {
+    "F": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "H": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "S": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "mean_fold_metrics": {
+    "F": {
+      "folds": 5,
+      "mAP": 0.18595475229738692,
+      "macro_auroc": 0.7596831805952963
+    },
+    "H": {
+      "folds": 5,
+      "mAP": 0.16100595979957927,
+      "macro_auroc": 0.7418084822472555
+    },
+    "S": {
+      "folds": 5,
+      "mAP": 0.1634694959387688,
+      "macro_auroc": 0.7440908917344486
+    }
+  },
+  "paired_bca_oof": {
+    "F_minus_H": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.03109563878687599,
+        "ci_low": 0.013907317663042026,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.021818723499255094
+      },
+      "macro_auroc": {
+        "ci_high": 0.024438124856277582,
+        "ci_low": 0.009506420776195077,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.0162039540716703
+      },
+      "macro_brier": {
+        "ci_high": -0.00045211572919976183,
+        "ci_low": -0.001031551265727231,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.000729036119403545
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "F_minus_S": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.03594977127632844,
+        "ci_low": 0.016846615920393476,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.027011001173015137
+      },
+      "macro_auroc": {
+        "ci_high": 0.02844012418258115,
+        "ci_low": 0.012551654379943102,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.02033686073582952
+      },
+      "macro_brier": {
+        "ci_high": -0.00022088938684325748,
+        "ci_low": -0.0008321767943937751,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0005334070616173775
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "F_minus_logreg_historical": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.006818548494682695,
+        "ci_low": -0.01382584472485891,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0034955069381764903
+      },
+      "macro_auroc": {
+        "ci_high": 0.02522640722850906,
+        "ci_low": 0.006792456917159666,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.01683745810269266
+      },
+      "macro_brier": {
+        "ci_high": -0.00016050136858570036,
+        "ci_low": -0.0008493305495497197,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0005042896882437239
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "H_minus_S": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.014752493177239083,
+        "ci_low": -0.005046309862106969,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.005192277673760043
+      },
+      "macro_auroc": {
+        "ci_high": 0.013129116318946771,
+        "ci_low": -0.005398490228677451,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.004132906664159219
+      },
+      "macro_brier": {
+        "ci_high": 0.0005069767132188888,
+        "ci_low": -9.724731266030625e-05,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.00019562905778616746
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "H_minus_logreg_historical": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": -0.016041463622370286,
+        "ci_low": -0.03605458024280364,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.025314230437431584
+      },
+      "macro_auroc": {
+        "ci_high": 0.009098086079176849,
+        "ci_low": -0.011217675625273028,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.0006335040310223583
+      },
+      "macro_brier": {
+        "ci_high": 0.0005551429681767126,
+        "ci_low": -9.280580006671247e-05,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.00022474643115982101
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "S_minus_logreg_historical": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": -0.01879101383481896,
+        "ci_low": -0.04108632453181054,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.030506508111191627
+      },
+      "macro_auroc": {
+        "ci_high": 0.006070833837983424,
+        "ci_low": -0.0145236254496668,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.003499402633136861
+      },
+      "macro_brier": {
+        "ci_high": 0.0003507758683855802,
+        "ci_low": -0.0003263833916958035,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 2.9117373373653554e-05
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    }
+  },
+  "pooled_oof": {
+    "F": {
+      "at_risk": {
+        "mAP": 0.16260120886119506,
+        "macro_auroc": 0.718231593453304,
+        "macro_brier": 0.04591127093046444,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "at_risk"
+      },
+      "masked": {
+        "mAP": 0.16260120886119506,
+        "macro_auroc": 0.7502900651404294,
+        "macro_brier": 0.03811499245676971,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
+    },
+    "H": {
+      "at_risk": {
+        "mAP": 0.14078248536193996,
+        "macro_auroc": 0.7005419838266829,
+        "macro_brier": 0.046646652999407,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "at_risk"
+      },
+      "masked": {
+        "mAP": 0.14078248536193996,
+        "macro_auroc": 0.7340861110687591,
+        "macro_brier": 0.03884402857617326,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
+    },
+    "S": {
+      "at_risk": {
+        "mAP": 0.13559020768817992,
+        "macro_auroc": 0.69649351359526,
+        "macro_brier": 0.04636410200026138,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "at_risk"
+      },
+      "masked": {
+        "mAP": 0.13559020768817992,
+        "macro_auroc": 0.7299532044045999,
+        "macro_brier": 0.03864839951838709,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
+    },
+    "logreg_historical": {
+      "at_risk": {
+        "mAP": 0.16609671579937155,
+        "macro_auroc": 0.6979976947384781,
+        "macro_brier": 0.04666946552855458,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "at_risk"
+      },
+      "masked": {
+        "mAP": 0.16609671579937155,
+        "macro_auroc": 0.7334526070377367,
+        "macro_brier": 0.03861928214501344,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 2791,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
+    }
+  },
+  "pretraining": {
+    "fold0": {
+      "best_epoch": 28,
+      "best_held_loss": 1.4024891436354014,
+      "device": "mps",
+      "epochs_completed": 30,
+      "padded_tokens_per_second": 6683.14197482516,
+      "parameters": 640200,
+      "peak_memory_gb": 10.816497802734375,
+      "seconds_this_session": 2329.28644320881,
+      "status": "completed",
+      "stopped_early": false,
+      "target_tokens_per_second": 6565.363416159756
+    },
+    "fold1": {
+      "best_epoch": 29,
+      "best_held_loss": 1.4179838060400416,
+      "device": "mps",
+      "epochs_completed": 30,
+      "padded_tokens_per_second": 4185.94385581416,
+      "parameters": 640712,
+      "peak_memory_gb": 11.315582275390625,
+      "seconds_this_session": 3679.577302167192,
+      "status": "completed",
+      "stopped_early": false,
+      "target_tokens_per_second": 4111.383661131359
+    },
+    "fold2": {
+      "best_epoch": 29,
+      "best_held_loss": 1.4125553545059657,
+      "device": "mps",
+      "epochs_completed": 30,
+      "padded_tokens_per_second": 7546.001222068565,
+      "parameters": 640200,
+      "peak_memory_gb": 10.301925659179688,
+      "seconds_this_session": 2049.597335707862,
+      "status": "completed",
+      "stopped_early": false,
+      "target_tokens_per_second": 7413.460554071366
+    },
+    "fold3": {
+      "best_epoch": 29,
+      "best_held_loss": 1.4393392197906147,
+      "device": "mps",
+      "epochs_completed": 30,
+      "padded_tokens_per_second": 13072.907425521547,
+      "parameters": 637512,
+      "peak_memory_gb": 9.269271850585938,
+      "seconds_this_session": 1193.288645917084,
+      "status": "completed",
+      "stopped_early": false,
+      "target_tokens_per_second": 12844.405293256268
+    },
+    "fold4": {
+      "best_epoch": 28,
+      "best_held_loss": 1.4264118604374563,
+      "device": "mps",
+      "epochs_completed": 30,
+      "padded_tokens_per_second": 26056.1447391778,
+      "parameters": 640072,
+      "peak_memory_gb": 1.9746551513671875,
+      "seconds_this_session": 587.9411614169367,
+      "status": "completed",
+      "stopped_early": false,
+      "target_tokens_per_second": 25593.15963477725
+    }
+  },
+  "reference_note": "logreg_historical is the step-2 code-count configuration (C=0.003) reproduced in P3a, scored with the common mask. The revised at-risk baselines run in P4c.",
+  "scope": "training-split cross-validation; official val not read",
+  "selection": {
+    "best_confirmed": "F",
+    "consistency_checks_against_S": {
+      "F": {
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain_vs_S": 0.015592288860847625,
+        "mean_map_loss_vs_S": -0.022485256358618116,
+        "passes_consistency_rule": true
+      },
+      "H": {
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain_vs_S": -0.00228240948719316,
+        "mean_map_loss_vs_S": 0.002463536139189537,
+        "passes_consistency_rule": false
+      }
+    },
+    "mean_fold_metrics": {
+      "F": {
+        "mAP": 0.18595475229738692,
+        "macro_auroc": 0.7596831805952963
+      },
+      "H": {
+        "mAP": 0.16100595979957927,
+        "macro_auroc": 0.7418084822472555
+      },
+      "S": {
+        "mAP": 0.1634694959387688,
+        "macro_auroc": 0.7440908917344486
+      }
+    },
+    "rule": "model plan section 5.3; margin 0.005; four of five folds",
+    "selected_method": "F",
+    "status": "decided",
+    "supervised_parameters": {
+      "F": 640200,
+      "H": 5320,
+      "S": 640200
+    },
+    "tie_order": "fewer supervised parameters, then fewer total parameters, then less training work",
+    "within_margin_of_best": [
+      "F"
+    ]
+  }
+}

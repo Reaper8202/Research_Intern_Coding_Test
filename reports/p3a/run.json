@@ -1,0 +1,56 @@
+{
+  "baseline_reproduced": true,
+  "completed_at": "2026-10-31T19:16:39.118502+00:00",
+  "generation_status": "deferred",
+  "input_manifest_sha256": "4ada39756fcf241a5472104775cf4cb841159ef173af8709e17423edf517f133",
+  "metric_version": "first-diagnosis-probabilities-v2",
+  "official_val_scored": false,
+  "phase": "P3a",
+  "raw_checks": {
+    "anchors_match": true,
+    "demographics_match": true,
+    "labels_match": true,
+    "n_events": 1154532,
+    "n_patients": 2791,
+    "permitted_events_match": true,
+    "prior_masks_match": true,
+    "recorded_omissions_match": true,
+    "scope": "official training patients only",
+    "status": "passed",
+    "stop_before_start": {
+      "allergies": {
+        "raw_rows": 0,
+        "removed_by_cutoff": 0,
+        "stop_omitted": 0
+      },
+      "careplans": {
+        "raw_rows": 0,
+        "removed_by_cutoff": 0,
+        "stop_omitted": 0
+      },
+      "conditions": {
+        "raw_rows": 0,
+        "removed_by_cutoff": 0,
+        "stop_omitted": 0
+      },
+      "devices": {
+        "raw_rows": 0,
+        "removed_by_cutoff": 0,
+        "stop_omitted": 0
+      },
+      "encounters": {
+        "raw_rows": 0,
+        "removed_by_cutoff": 0,
+        "stop_omitted": 0
+      },
+      "medications": {
+        "raw_rows": 57,
+        "removed_by_cutoff": 8,
+        "stop_omitted": 49
+      }
+    },
+    "training_positives": 5214
+  },
+  "started_at": "2026-10-31T19:16:21.722031+00:00",
+  "status": "passed"
+}

@@ -1,0 +1,9 @@
+{
+  "conversions": [],
+  "fitted_bins": "Not fitted here. P3b must fit each fold separately.",
+  "missing_unit": "empty string",
+  "normalization": "Strip surrounding whitespace; preserve case.",
+  "policy": "Keep every code/unit group separate. Infer no equivalences.",
+  "scope": "training histories before real anchors",
+  "version": "separate-literal-units-v1"
+}

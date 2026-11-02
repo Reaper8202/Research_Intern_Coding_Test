@@ -1,0 +1,19 @@
+# Data, trained models, and logs are produced locally and never committed.
+# data/raw is a link to the task dataset; data/processed is written by `make dataset`.
+data/*
+!data/README.md
+models/
+logs/
+wandb/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
