@@ -1,0 +1,61 @@
+# Round 2: fine-tune with dropout 0.3 from full-timeline pretraining (tests D16).
+# Identical to configs/v2_base.toml except the lines marked 'changed'.
+# Changing any value changes the configuration hash; a resumed run then fails on purpose.
+name = "small-v2-ftl"
+seed = 20261028
+
+representation_from = "small-v2-base"
+pretrain_from = "small-v2-ftl-pre"
+
+[representation]
+context_length = 1024        # E5 compares 512 and 2,048 later
+max_summary_tokens = 128
+min_patients = 5             # fit patients needed for a code or value token
+refill_gap_days = 1.0        # M1: all merged refills have a gap of exactly 0 days
+exclude_observations = ["DALY", "QALY", "QOLS"]  # D36
+
+[modalities]
+genomics = true              # [DNA] dna:<site>:<variant alleles> prefix tokens
+imaging = true               # [IMG] prefix token encoded by a 3-D CNN from random weights
+image_size = 64              # volumes resampled to 64 x 64 x 64 (`make modalities`)
+
+[model]
+n_layers = 2
+d_model = 128
+n_heads = 4
+ff_mult = 4
+dropout = 0.3                # changed
+head_dropout = 0.3           # changed
+
+[pretrain]
+full_timeline = true          # changed: names the parent's data; no pretraining runs here
+batch_size = 32              # patients per optimizer update
+micro_batch_size = 8         # gradient accumulation keeps memory low; loss totals stay exact
+max_epochs = 30
+patience = 3
+lr = 0.001
+warmup_fraction = 0.1
+final_lr_fraction = 0.1
+weight_decay = 0.1
+betas = [0.9, 0.95]
+grad_clip = 1.0
+eval_seed = 20261028         # fixed held-out evaluation windows
+
+[finetune]
+batch_size = 32
+micro_batch_size = 8
+max_epochs = 30
+patience = 5                 # on held-out masked macro AUROC; mAP breaks exact ties
+head_lr = 0.001
+body_lr_S = 0.0003
+body_lr_F = 0.0001
+weight_decay = 0.01
+grad_clip = 1.0
+
+[runtime]
+device = "auto"              # "cpu", "mps", or "auto"
+wandb = "offline"            # sync later with `wandb sync`; "disabled" turns it off
+max_steps_per_epoch = 0      # 0 means full epochs
+max_fit_patients = 0         # 0 means all fit patients
+max_held_patients = 0
+eval_batch_size = 32

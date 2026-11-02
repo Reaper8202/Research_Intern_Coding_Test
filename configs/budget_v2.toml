@@ -44,3 +44,30 @@ id = "A3-pooled-readout"
 config = "configs/experiments/v2_pool.toml"
 reference = "configs/experiments/v2_do03.toml"
 folds = [0, 1, 2, 3, 4]
+
+# Added on 2 November 2026, before any score of these runs and before A0 to A3 finished.
+# X1: extra anchors answer the overfitting evidence (2,232 supervised examples). A real-data check
+# before any training showed cut days across the whole history were far from real anchors (age 39
+# against 61; positive rate 1.0% against 5.1%). So cut days use the latest allowed five years (age
+# 57; 3.1%) and a head input marks these examples. Held-out scoring uses real anchors only.
+# P2: Derek asked whether pretraining limits the model. Pretraining reads fit patients' full
+# timelines; 27 to 37 percent of rows in the checked tables lie after the anchor. Held-out, val,
+# and test patients stay out, and inputs stay cut. Adoption reverses D16, so it needs Derek.
+
+[[experiment]]
+id = "X1-extra-anchors"
+config = "configs/experiments/v2_xa.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "P2a-full-timeline-parent"
+config = "configs/experiments/v2_ftl_pre.toml"
+reference = "configs/v2_base.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "P2b-full-timeline-dropout03"
+config = "configs/experiments/v2_ftl.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]

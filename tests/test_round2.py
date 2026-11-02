@@ -10,8 +10,16 @@ import pytest
 import torch
 
 from ehrforecast.contracts import prediction_cohort
+from ehrforecast.finetune import with_landmarks
+from ehrforecast.full_timeline import full_events
 from ehrforecast.model import EHRTransformer, ModelConfig
-from ehrforecast.sequences import SequenceConfig, build_histories
+from ehrforecast.sequences import (
+    LANDMARK_HORIZON_DAYS,
+    LANDMARK_SPAN_DAYS,
+    Sample,
+    SequenceConfig,
+    build_histories,
+)
 from ehrforecast.tokenizer import FoldTokenizer, drop_observations
 from ehrforecast.training import FoldData, collate, model_config
 from tests.transformer_fixtures import TARGETS, config, fold_data, permitted_events, raw_tables
@@ -109,3 +117,158 @@ def test_excluded_codes_do_not_reach_a_patient_history() -> None:
     hist = build_histories(tok.encode(events), prepared, tok, TARGETS)
     ids = {t for t, name in enumerate(tok.vocabulary) if name.startswith("obs:O1:")}
     assert not ids.intersection(np.unique(hist.tokens).tolist())
+
+
+def _landmark_case() -> tuple[FoldData, int, int, dict[int, int]]:
+    fold = fold_data(n_patients=24)
+    hist = fold.histories
+    cohort = fold.data.inputs.cohort
+    days = (cohort["anchor_date"] - cohort["birthdate"]).dt.days
+    columns = {
+        fold.tokenizer.token_id(f"hx:{c}"): j
+        for j, c in enumerate(TARGETS)
+        if f"hx:{c}" in fold.tokenizer.vocabulary
+    }
+    for i in range(len(hist)):
+        anchor = int(days[str(hist.patients[i])])
+        allowed = hist.landmark_range(i, anchor)
+        if allowed is not None and allowed[1] - allowed[0] > 200:
+            return fold, i, anchor, columns
+    raise AssertionError("no patient has a usable landmark range")
+
+
+def test_a_landmark_sees_only_events_before_its_cut_day() -> None:
+    fold, i, anchor, _ = _landmark_case()
+    hist, seq = fold.histories, SequenceConfig(48, 6)
+    low, high = hist.landmark_range(i, anchor) or (0, 0)
+    assert high + LANDMARK_HORIZON_DAYS < anchor  # the whole window ends before the real anchor
+    base = int(hist.token_offsets[i])
+    event_days = hist.token_days[base : base + hist.n_tokens(i)]
+    for cut in (low, (low + high) // 2, high):
+        sample = hist.landmark_sample(i, cut, seq)
+        n_events = len(sample.tokens) - sample.n_prefix
+        visible = int(np.searchsorted(event_days, cut, side="left"))
+        kept = hist.tokens[base + visible - n_events : base + visible]
+        assert np.array_equal(sample.tokens[sample.n_prefix :], kept)
+        assert len(sample.tokens) <= seq.context_length
+        assert sample.ages[sample.readout] * 365.25 < cut
+        assert sample.head[0] == pytest.approx(cut / 365.25 / 100, abs=1e-5)
+        assert sample.head[2] > 0  # recency is measured from the cut day
+    flagged = SequenceConfig(48, 6, landmark_flag=True)
+    assert flagged.n_head_features == 5
+    assert hist.landmark_sample(i, high, flagged).head[-1] == 1.0  # an extra anchor
+    assert hist.prediction_sample(i, flagged).head[-1] == 0.0  # a real anchor
+    assert len(hist.prediction_sample(i, seq).head) == 4  # the default is unchanged
+    assert high - low <= LANDMARK_SPAN_DAYS  # cut days stay near the real anchor
+
+
+def test_later_events_cannot_change_a_landmark_input() -> None:
+    fold, i, anchor, _ = _landmark_case()
+    hist, seq = fold.histories, SequenceConfig(48, 6)
+    low, high = hist.landmark_range(i, anchor) or (0, 0)
+    cut = (low + high) // 2
+    before = hist.landmark_sample(i, cut, seq)
+    base = int(hist.token_offsets[i])
+    event_days = hist.token_days[base : base + hist.n_tokens(i)]
+    later = base + int(np.searchsorted(event_days, cut, side="left"))
+    saved = hist.tokens[later:].copy()
+    hist.tokens[later : base + hist.n_tokens(i)] = 0
+    try:
+        after = hist.landmark_sample(i, cut, seq)
+    finally:
+        hist.tokens[later:] = saved
+    assert np.array_equal(before.tokens, after.tokens) and np.array_equal(before.ages, after.ages)
+
+
+def test_landmark_labels_follow_first_diagnosis_days() -> None:
+    fold, i, _, columns = _landmark_case()
+    hist = fold.histories
+    token = next(iter(columns))
+    tokens, days, target = hist._hx(i)
+    hist_copy = {
+        "hx_offsets": hist.hx_offsets,
+        "hx_tokens": hist.hx_tokens,
+        "hx_days": hist.hx_days,
+        "hx_target": hist.hx_target,
+    }
+    a = int(hist.hx_offsets[i])
+    hist.hx_tokens = np.insert(hist.hx_tokens, a, token)
+    hist.hx_days = np.insert(hist.hx_days, a, 5000)
+    hist.hx_target = np.insert(hist.hx_target, a, True)
+    hist.hx_offsets = hist.hx_offsets + (np.arange(len(hist.hx_offsets)) > i)
+    try:
+        col = columns[token]
+        prior = hist.landmark_targets(i, 5001, {token: col}, 3)
+        start = hist.landmark_targets(i, 5000, {token: col}, 3)
+        inside = hist.landmark_targets(i, 5000 - LANDMARK_HORIZON_DAYS, {token: col}, 3)
+        outside = hist.landmark_targets(i, 4999 - LANDMARK_HORIZON_DAYS, {token: col}, 3)
+    finally:
+        for name, value in hist_copy.items():
+            setattr(hist, name, value)
+    assert (prior[0][col], prior[1][col]) == (0.0, 0.0)  # already diagnosed: masked
+    assert (start[0][col], start[1][col]) == (1.0, 1.0)  # on the cut day: inside the window
+    assert (inside[0][col], inside[1][col]) == (1.0, 1.0)  # on the last window day
+    assert (outside[0][col], outside[1][col]) == (0.0, 1.0)  # after the window: a known 0
+    other = next(j for j in range(3) if j != col)
+    assert prior[1][other] == 0.0  # a target outside the vocabulary map stays masked
+    assert len(tokens) == len(days) == len(target)
+
+
+def test_extra_anchors_use_fit_patients_only_and_repeat_for_a_seed() -> None:
+    fold = fold_data(n_patients=24)
+    seq = SequenceConfig(48, 6)
+    base = [fold.histories.prediction_sample(int(r), seq) for r in fold.fit_rows]
+    y = fold.data.labels.loc[fold.fit, TARGETS].to_numpy("float32")
+    mask = 1.0 - fold.data.inputs.prior.loc[fold.fit, TARGETS].to_numpy("float32")
+    calls: list[int] = []
+    real = fold.histories.landmark_sample
+
+    def spy(i: int, cut: int, config: SequenceConfig) -> Sample:
+        calls.append(i)
+        return real(i, cut, config)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(fold.histories, "landmark_sample", spy)
+        a = with_landmarks(fold, seq, base, y, mask, 1, 7, 3)
+    assert calls and set(calls) <= {int(r) for r in fold.fit_rows}
+    assert not set(calls) & {int(r) for r in fold.held_rows}
+    b = with_landmarks(fold, seq, base, y, mask, 1, 7, 3)
+    c = with_landmarks(fold, seq, base, y, mask, 1, 7, 4)
+    assert len(a[0]) == len(base) + len(calls) == a[1].shape[0] == a[2].shape[0]
+    assert a[0][: len(base)] == base  # the real anchors stay first and unchanged
+    assert np.array_equal(a[1], b[1]) and np.array_equal(a[2], b[2])  # same seed and epoch
+    tokens_a = [x.tokens.tolist() for x in a[0][len(base) :]]
+    tokens_b = [x.tokens.tolist() for x in b[0][len(base) :]]
+    tokens_c = [x.tokens.tolist() for x in c[0][len(base) :]]
+    assert tokens_a == tokens_b and tokens_a != tokens_c
+
+
+def test_full_timeline_events_hold_only_the_given_patients_and_pass_the_anchor() -> None:
+    cohort, tables = raw_tables()
+    prepared = prediction_cohort(cohort)
+    fit = prepared.index[:16]
+    uncut = full_events(tables, fit)
+    assert set(uncut["patient_id"]) <= set(fit)
+    anchors = uncut["patient_id"].map(prepared["anchor_date"])
+    assert (uncut["time"] >= anchors).any()  # later events are present for fit patients
+    cut = permitted_events(cohort, tables)
+    assert (cut["time"] < cut["patient_id"].map(prepared["anchor_date"])).all()  # inputs stay cut
+    encounters = uncut["source"].astype(str).eq("encounters")
+    assert uncut.loc[encounters, "value_num"].isna().all()  # no encounter durations
+
+
+def test_full_timeline_pretraining_never_reads_held_out_patients() -> None:
+    cohort, tables = raw_tables()
+    prepared = prediction_cohort(cohort)
+    fit, held = prepared.index[:16], prepared.index[16:]
+    events = permitted_events(cohort, tables)
+    tok = FoldTokenizer.fit(events, fit, min_patients=1)
+    uncut = full_events(tables, fit)
+    hist = build_histories(tok.encode(uncut), prepared, tok, TARGETS)
+    rows = hist.index_of(held)
+    assert all(hist.n_tokens(int(r)) == 0 for r in rows)
+    base = build_histories(tok.encode(events), prepared, tok, TARGETS)
+    longer = [hist.n_tokens(int(r)) > base.n_tokens(int(r)) for r in hist.index_of(fit)]
+    assert any(longer)
+    # A saved tokenizer fitted before the anchor stays the only vocabulary source.
+    assert FoldTokenizer.fit(events, fit, min_patients=1).sha256 == tok.sha256

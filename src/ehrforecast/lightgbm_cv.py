@@ -35,6 +35,7 @@ import logging
 import time
 import tomllib
 import warnings
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,7 @@ from ehrforecast.folds import N_FOLDS, fold_patients, load_folds
 from ehrforecast.logging_utils import setup_logging
 from ehrforecast.numeric import assign_bins, fit_bin_edges, numeric_observations
 from ehrforecast.provenance import write_json
+from ehrforecast.tokenizer import drop_observations
 
 log = logging.getLogger("ehrforecast.lightgbm_cv")
 # LightGBM names numpy columns itself; scikit-learn then warns on every numpy prediction.
@@ -261,24 +263,34 @@ def select_setting(grid: pd.DataFrame) -> dict[str, Any]:
 
 
 def run(
-    dataset_dir: Path, models_dir: Path, reports_dir: Path, compare: Path | None, n_boot: int
+    dataset_dir: Path,
+    models_dir: Path,
+    reports_dir: Path,
+    compare: Path | None,
+    n_boot: int,
+    exclude_observations: tuple[str, ...] = (),
+    feature_sets: tuple[str, ...] = FEATURE_SETS,
+    output_name: str = "lightgbm",
 ) -> dict[str, Any]:
     data = load_training_data(dataset_dir)
+    if exclude_observations:  # D36: the same removal as the transformer's tokenizer
+        kept = drop_observations(data.inputs.events, frozenset(exclude_observations))
+        data = replace(data, inputs=replace(data.inputs, events=kept))
     labels, prior, codes = data.labels, data.inputs.prior, data.inputs.codes
     assignments = load_folds(dataset_dir)
     latest = latest_values(data.inputs.events, data.inputs.cohort)
     values = all_values(data.inputs.events)
     reports_dir.mkdir(parents=True, exist_ok=True)
-    (models_dir / "lightgbm").mkdir(parents=True, exist_ok=True)
+    (models_dir / output_name).mkdir(parents=True, exist_ok=True)
     grids, selected, oof = [], {}, {}
-    for name in FEATURE_SETS:
+    for name in feature_sets:
         grid, probabilities = run_feature_set(data, assignments, latest, values, name)
         grids.append(grid)
         choice = select_setting(grid)
         selected[name] = choice
         key = (choice["num_leaves"], choice["min_child_samples"], choice["n_estimators"])
         oof[name] = probabilities[key]
-        oof[name].to_parquet(models_dir / "lightgbm" / f"oof_{name}.parquet")
+        oof[name].to_parquet(models_dir / output_name / f"oof_{name}.parquet")
         selected[name]["fold_scores"] = (
             grid.loc[
                 grid["num_leaves"].eq(key[0])
@@ -291,20 +303,23 @@ def run(
         )
     pd.concat(grids).to_csv(reports_dir / "grid.csv", index=False)
 
-    folds_values = pd.DataFrame(selected["counts_values"]["fold_scores"]).set_index("fold")
-    folds_binned = pd.DataFrame(selected["counts_binned"]["fold_scores"]).set_index("fold")
-    difference = folds_binned - folds_values
-    auroc_difference = float(difference["macro_auroc"].mean())
-    map_difference = float(difference["mAP"].mean())
-    value_bin_check: dict[str, Any] = {
-        "binned_minus_values_per_fold": difference.reset_index().to_dict("records"),
-        "mean_auroc_difference": auroc_difference,
-        "mean_map_difference": map_difference,
-        "material_loss": min(auroc_difference, map_difference) <= -MATERIAL,
-    }
+    value_bin_check: dict[str, Any] = {"status": "not run"}
+    if {"counts_values", "counts_binned"} <= set(selected):
+        folds_values = pd.DataFrame(selected["counts_values"]["fold_scores"]).set_index("fold")
+        folds_binned = pd.DataFrame(selected["counts_binned"]["fold_scores"]).set_index("fold")
+        difference = folds_binned - folds_values
+        auroc_difference = float(difference["macro_auroc"].mean())
+        map_difference = float(difference["mAP"].mean())
+        value_bin_check = {
+            "binned_minus_values_per_fold": difference.reset_index().to_dict("records"),
+            "mean_auroc_difference": auroc_difference,
+            "mean_map_difference": map_difference,
+            "material_loss": min(auroc_difference, map_difference) <= -MATERIAL,
+        }
 
     summary: dict[str, Any] = {
         "scope": "training-split cross-validation; official val not read",
+        "excluded_observations": list(exclude_observations),
         "fixed_settings": FIXED,
         "selected": selected,
         "value_bin_check": value_bin_check,
@@ -319,7 +334,7 @@ def run(
     if compare is not None:
         name, transformer = transformer_oof(models_dir, compare, assignments)
         others = {f"{name}_F": transformer.loc[labels.index], **others}
-    for name in ("counts", "counts_values"):
+    for name in [s for s in ("counts", "counts_values") if s in oof]:
         for other_name, other in others.items():
             label = (
                 f"{other_name}_minus_lightgbm_{name}"
@@ -340,7 +355,12 @@ def run(
 
 
 def compare_saved(
-    dataset_dir: Path, models_dir: Path, reports_dir: Path, configs: list[Path], n_boot: int
+    dataset_dir: Path,
+    models_dir: Path,
+    reports_dir: Path,
+    configs: list[Path],
+    n_boot: int,
+    output_name: str = "lightgbm",
 ) -> dict[str, Any]:
     """Paired BCa of transformer F configurations against the saved LightGBM predictions."""
     data = load_training_data(dataset_dir)
@@ -354,7 +374,7 @@ def compare_saved(
             "pooled": evaluate_predictions(labels, transformer, codes, prior=prior).summary
         }
         for feature_set in ("counts", "counts_values"):
-            saved = pd.read_parquet(models_dir / "lightgbm" / f"oof_{feature_set}.parquet")
+            saved = pd.read_parquet(models_dir / output_name / f"oof_{feature_set}.parquet")
             out[name][f"minus_lightgbm_{feature_set}"] = bootstrap_comparison(
                 labels,
                 transformer,
@@ -380,14 +400,33 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="transformer configs to compare with the saved LightGBM predictions (no refit)",
     )
+    parser.add_argument("--exclude-observations", nargs="*", default=[])
+    parser.add_argument("--feature-sets", nargs="+", default=list(FEATURE_SETS))
+    parser.add_argument("--output-name", default="lightgbm")
     parser.add_argument("--n-boot", type=int, default=1000)
     parser.add_argument("--log-file", type=Path, default=None)
     args = parser.parse_args(argv)
     setup_logging(args.log_file)
     if args.compare_only:
-        compare_saved(args.dataset, args.models, args.reports, args.compare_only, args.n_boot)
+        compare_saved(
+            args.dataset,
+            args.models,
+            args.reports,
+            args.compare_only,
+            args.n_boot,
+            args.output_name,
+        )
         return
-    summary = run(args.dataset, args.models, args.reports, args.compare_config, args.n_boot)
+    summary = run(
+        args.dataset,
+        args.models,
+        args.reports,
+        args.compare_config,
+        args.n_boot,
+        tuple(args.exclude_observations),
+        tuple(args.feature_sets),
+        args.output_name,
+    )
     for name, choice in summary["selected"].items():
         log.info(
             "%s: AUROC %.4f mAP %.4f (leaves %d, min child %d, trees %d, edge %s)",

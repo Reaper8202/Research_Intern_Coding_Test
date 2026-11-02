@@ -34,7 +34,7 @@ from ehrforecast.evaluation import evaluate_predictions
 from ehrforecast.logging_utils import setup_logging
 from ehrforecast.model import EHRTransformer
 from ehrforecast.provenance import file_hash, object_hash
-from ehrforecast.sequences import Sample
+from ehrforecast.sequences import Sample, SequenceConfig
 from ehrforecast.training import (
     EarlyStopping,
     FoldData,
@@ -126,6 +126,43 @@ def body_snapshot(model: EHRTransformer) -> list[torch.Tensor]:
     return [p.detach().clone() for p in model.body_parameters()]
 
 
+def with_landmarks(
+    fold: FoldData,
+    sequence: SequenceConfig,
+    samples: list[Sample],
+    y: np.ndarray,
+    unmasked: np.ndarray,
+    per_patient: int,
+    seed: int,
+    epoch: int,
+) -> tuple[list[Sample], np.ndarray, np.ndarray]:
+    """Add earlier-anchor examples for fit patients; depends only on (seed, epoch), for resume."""
+    hist, codes = fold.histories, fold.data.inputs.codes
+    rng = np.random.default_rng([seed, epoch, 1])
+    cohort = fold.data.inputs.cohort
+    anchor_days = (cohort["anchor_date"] - cohort["birthdate"]).dt.days
+    columns = {
+        fold.tokenizer.token_id(f"hx:{c}"): j
+        for j, c in enumerate(codes)
+        if f"hx:{c}" in fold.tokenizer.vocabulary
+    }
+    extra, ys, masks = [], [], []
+    for row in fold.fit_rows:
+        i = int(row)
+        allowed = hist.landmark_range(i, int(anchor_days[str(hist.patients[i])]))
+        if allowed is None:
+            continue
+        for _ in range(per_patient):
+            cut = int(rng.integers(allowed[0], allowed[1] + 1))
+            extra.append(hist.landmark_sample(i, cut, sequence))
+            target, mask = hist.landmark_targets(i, cut, columns, len(codes))
+            ys.append(target)
+            masks.append(mask)
+    if not extra:
+        return samples, y, unmasked
+    return [*samples, *extra], np.vstack([y, *ys]), np.vstack([unmasked, *masks])
+
+
 def run_finetuning(
     config: dict[str, Any],
     fold: FoldData,
@@ -151,6 +188,7 @@ def run_finetuning(
     held_samples = [hist.prediction_sample(int(r), sequence) for r in fold.held_rows]
     y_fit = labels.loc[fold.fit, codes].to_numpy("float32")
     unmasked_fit = 1.0 - prior.loc[fold.fit, codes].to_numpy("float32")
+    extra_anchors = int(fc.get("extra_anchors", 0))
 
     seed_everything(seed)
     model = build_model(config, fold.tokenizer, len(codes)).to(device)
@@ -207,7 +245,12 @@ def run_finetuning(
             ):
                 break
             rng = epoch_rng(seed, epoch)
-            batches = batch_order(np.array([len(s.tokens) for s in fit_samples]), batch_size, rng)
+            epoch_samples, epoch_y, epoch_unmasked = fit_samples, y_fit, unmasked_fit
+            if extra_anchors:
+                epoch_samples, epoch_y, epoch_unmasked = with_landmarks(
+                    fold, sequence, fit_samples, y_fit, unmasked_fit, extra_anchors, seed, epoch
+                )
+            batches = batch_order(np.array([len(s.tokens) for s in epoch_samples]), batch_size, rng)
             if cap:
                 batches = batches[:cap]
             set_train_mode(model, method)
@@ -215,9 +258,9 @@ def run_finetuning(
             for batch in batches:
                 parts = []
                 for mb in micro_batches(batch, micro):
-                    y = torch.from_numpy(y_fit[mb]).to(device)
-                    mask = torch.from_numpy(unmasked_fit[mb]).to(device)
-                    chosen = [fit_samples[k] for k in mb]
+                    y = torch.from_numpy(epoch_y[mb]).to(device)
+                    mask = torch.from_numpy(epoch_unmasked[mb]).to(device)
+                    chosen = [epoch_samples[k] for k in mb]
 
                     def loss_fn(
                         c: list[Sample] = chosen, y: torch.Tensor = y, m: torch.Tensor = mask
@@ -236,7 +279,7 @@ def run_finetuning(
                             m,
                         )
 
-                    parts.append((loss_fn, int(unmasked_fit[mb].sum())))
+                    parts.append((loss_fn, int(epoch_unmasked[mb].sum())))
                 loss_sum, count, norm = accumulate_step(
                     parts, model, optimizer, None, float(fc["grad_clip"])
                 )

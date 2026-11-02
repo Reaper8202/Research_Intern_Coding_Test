@@ -64,7 +64,7 @@ def epoch_windows(
     fold: FoldData, rows: list[int], seed: int, epoch: int, config: SequenceConfig
 ) -> tuple[list[Sample], np.random.Generator]:
     rng = epoch_rng(seed, epoch)
-    hist = fold.histories
+    hist = fold.pretrain_histories if fold.pretrain_histories is not None else fold.histories
     samples = [
         hist.window_sample(r, int(rng.integers(hist.window_starts(r, config))), config)
         for r in rows
@@ -158,8 +158,9 @@ def run_pretraining(
     pc, runtime = config["pretrain"], config["runtime"]
     seed, sequence = int(config["seed"]), sequence_config(config)
     device = device or select_device(str(runtime["device"]))
-    hist = fold.histories
-    fit_rows = [int(r) for r in fold.fit_rows if hist.n_tokens(int(r))]
+    hist = fold.histories  # held-out windows always stay cut at the anchor
+    train_hist = fold.pretrain_histories if fold.pretrain_histories is not None else hist
+    fit_rows = [int(r) for r in fold.fit_rows if train_hist.n_tokens(int(r))]
     held_rows = [int(r) for r in fold.held_rows if hist.n_tokens(int(r))]
     eval_samples = fixed_windows(fold, held_rows, int(pc["eval_seed"]), sequence)
     codes = fold.data.inputs.codes

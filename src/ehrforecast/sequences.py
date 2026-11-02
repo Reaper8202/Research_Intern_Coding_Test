@@ -14,6 +14,13 @@ Genotype tokens have age 0 (fixed at birth). ``[IMG]`` has the age at the scan. 
 only when its study date is before the anchor day, the cut of every event table. A pretraining
 window also needs the scan before the window's first day, as for summary conditions, so no
 next-token target can follow a scan the window shows earlier.
+
+Extra supervised anchors (plan E3): a fit patient can also train from an earlier cut day. Only
+events before that day form the input. The 5-year label window ends before the patient's real
+anchor, so every label comes from permitted history. Held-out scoring uses real anchors only.
+Cut days come from the latest allowed five years, which keeps these examples near the real age.
+A head input marks them (the plan's early indicator); it is 0 for every real anchor and at
+prediction, so their lower base rates do not move real predictions.
 """
 
 from __future__ import annotations
@@ -40,6 +47,8 @@ AGE_BAND_EDGES = (18.0, 35.0, 50.0, 65.0, 80.0)
 N_AGE_SEX_FEATURES = 2 * (len(AGE_BAND_EDGES) + 1)
 RECENCY_SCALE = math.log1p(36525)
 DAYS_PER_YEAR = 365.25
+LANDMARK_HORIZON_DAYS = 1826  # five years; a landmark window must end before the real anchor
+LANDMARK_SPAN_DAYS = 1826  # cut days come from the latest allowed five years
 
 
 @dataclass(frozen=True)
@@ -47,10 +56,12 @@ class SequenceConfig:
     context_length: int = 1024
     max_summary: int = 128
     age_sex_head: bool = False
+    landmark_flag: bool = False
 
     @property
     def n_head_features(self) -> int:
-        return N_HEAD_FEATURES + (N_AGE_SEX_FEATURES if self.age_sex_head else 0)
+        extra = (N_AGE_SEX_FEATURES if self.age_sex_head else 0) + int(self.landmark_flag)
+        return N_HEAD_FEATURES + extra
 
     def __post_init__(self) -> None:
         if self.max_summary < 0 or self.context_length < self.max_summary + 3:
@@ -222,7 +233,7 @@ class Histories:
             sources=np.concatenate([np.full(n_prefix, -1), event_sources]),
             n_prefix=n_prefix,
             readout=len(tokens) - 1,
-            head=self.head_features(i, config.age_sex_head),
+            head=self._real_head(i, config),
             first_day=first_day,
             partial_day=partial,
             n_summary=len(hx_tokens),
@@ -231,13 +242,20 @@ class Histories:
         )
 
     def head_features(self, i: int, age_sex: bool = False) -> np.ndarray:
-        missing = self.days_since_last[i] < 0
-        recency = 0.0 if missing else math.log1p(int(self.days_since_last[i])) / RECENCY_SCALE
-        basic = [self.age_at_anchor[i] / 100.0, float(self.male[i]), recency, float(missing)]
+        return self._head(i, self.age_at_anchor[i], int(self.days_since_last[i]), age_sex)
+
+    def _real_head(self, i: int, config: SequenceConfig) -> np.ndarray:
+        head = self.head_features(i, config.age_sex_head)
+        return np.append(head, 0.0).astype("float32") if config.landmark_flag else head
+
+    def _head(self, i: int, age: float, days_since_last: int, age_sex: bool) -> np.ndarray:
+        missing = days_since_last < 0
+        recency = 0.0 if missing else math.log1p(days_since_last) / RECENCY_SCALE
+        basic = [age / 100.0, float(self.male[i]), recency, float(missing)]
         if not age_sex:
             return np.array(basic, dtype="float32")
         bands = np.zeros(len(AGE_BAND_EDGES) + 1, dtype="float32")
-        bands[int(np.searchsorted(AGE_BAND_EDGES, self.age_at_anchor[i], side="right"))] = 1.0
+        bands[int(np.searchsorted(AGE_BAND_EDGES, age, side="right"))] = 1.0
         return np.concatenate([basic, bands, bands * float(self.male[i])]).astype("float32")
 
     def _empty(self, i: int, config: SequenceConfig) -> Sample:
@@ -250,7 +268,7 @@ class Histories:
             sources=np.full(n_prefix, -1, dtype="int64"),
             n_prefix=n_prefix,
             readout=-1,
-            head=self.head_features(i, config.age_sex_head),
+            head=self._real_head(i, config),
             image=self._image(i, static),
         )
 
@@ -281,6 +299,65 @@ class Histories:
         if partial:  # one day alone exceeds the event budget: keep its final tokens
             start = n - budget
         return self._assemble(i, start, n, first, partial, config, None)
+
+    def landmark_range(self, i: int, anchor_day: int) -> tuple[int, int] | None:
+        """Allowed cut days: one event before the cut, and the window ends before the anchor."""
+        if self.n_tokens(i) == 0:
+            return None
+        low = int(self.token_days[self.token_offsets[i]]) + 1
+        high = anchor_day - LANDMARK_HORIZON_DAYS - 1
+        low = max(low, high - LANDMARK_SPAN_DAYS)
+        return (low, high) if low <= high else None
+
+    def landmark_sample(self, i: int, cut_day: int, config: SequenceConfig) -> Sample:
+        """The prediction input as if ``cut_day`` were the anchor. Later events are not used."""
+        base = int(self.token_offsets[i])
+        days_of_tokens = self.token_days[base : base + self.n_tokens(i)]
+        n = int(np.searchsorted(days_of_tokens, cut_day, side="left"))
+        if n == 0:
+            raise ValueError("a landmark needs at least one event before its cut day")
+        starts, days = self._days(i)
+        visible = int(np.searchsorted(starts, n, side="left"))
+        starts, days = starts[:visible], days[:visible]
+        fixed = 2 + len(self._static(i, cut_day)[0])
+        total = fixed + self._summary_counts(i, days, config.max_summary) + (n - starts)
+        fits = np.flatnonzero(total <= config.context_length)
+        first = int(fits[0]) if len(fits) else visible - 1
+        budget = (
+            config.context_length
+            - fixed
+            - int(self._summary_counts(i, days[[first]], config.max_summary)[0])
+        )
+        start = int(starts[first])
+        partial = n - start > budget
+        if partial:
+            start = n - budget
+        sample = self._assemble(i, start, n, first, partial, config, cut_day)
+        last_seen = int(days_of_tokens[n - 1])
+        head = self._head(i, cut_day / DAYS_PER_YEAR, cut_day - last_seen, config.age_sex_head)
+        sample.head = np.append(head, 1.0).astype("float32") if config.landmark_flag else head
+        return sample
+
+    def landmark_targets(
+        self, i: int, cut_day: int, token_to_column: dict[int, int], n_targets: int
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Labels and the unmasked flags at a cut day, from first-diagnosis days.
+
+        A target outside the vocabulary has no recorded first-diagnosis day, so it stays masked.
+        """
+        labels = np.zeros(n_targets, dtype="float32")
+        unmasked = np.zeros(n_targets, dtype="float32")
+        unmasked[list(token_to_column.values())] = 1.0
+        tokens, days, target = self._hx(i)
+        for token, day in zip(tokens[target], days[target], strict=True):
+            column = token_to_column.get(int(token))
+            if column is None:
+                continue
+            if day < cut_day:
+                unmasked[column] = 0.0
+            elif day <= cut_day + LANDMARK_HORIZON_DAYS:
+                labels[column] = 1.0
+        return labels, unmasked
 
     def window_starts(self, i: int, config: SequenceConfig) -> int:
         """Number of permitted pretraining window starts (day indices 0 to the prediction start)."""

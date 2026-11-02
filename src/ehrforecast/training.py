@@ -28,6 +28,7 @@ import torch
 from ehrforecast.contracts import TrainingData, load_training_data
 from ehrforecast.events import EVENTS_MANIFEST
 from ehrforecast.folds import fold_patients, load_folds
+from ehrforecast.full_timeline import FULL_EVENTS_FILE, load_fit_events
 from ehrforecast.modalities import Modalities, load_modalities
 from ehrforecast.model import EHRTransformer, ModelConfig
 from ehrforecast.provenance import file_hash, object_hash, write_json
@@ -35,6 +36,7 @@ from ehrforecast.sequences import (
     Histories,
     Sample,
     SequenceConfig,
+    build_histories,
     histories_provenance,
     load_histories,
 )
@@ -74,6 +76,7 @@ def sequence_config(config: dict[str, Any]) -> SequenceConfig:
         int(rep["context_length"]),
         int(rep["max_summary_tokens"]),
         bool(config["model"].get("age_sex_head", False)),
+        int(config["finetune"].get("extra_anchors", 0)) > 0,
     )
 
 
@@ -153,6 +156,7 @@ class FoldData:
     fit_rows: np.ndarray
     held_rows: np.ndarray
     provenance: dict[str, Any]
+    pretrain_histories: Histories | None = None  # uncut fit histories (plan E2 test) when set
 
 
 def _capped(patients: pd.Index, cap: int) -> pd.Index:
@@ -200,6 +204,13 @@ def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold:
     }
     if modalities is not None:
         provenance["modalities_manifest_sha256"] = modalities.manifest_sha256
+    pretrain_histories = None
+    if config["pretrain"].get("full_timeline", False):
+        uncut = load_fit_events(dataset_dir, fit, data.inputs.cohort.index)
+        pretrain_histories = build_histories(
+            tokenizer.encode(uncut), data.inputs.cohort, tokenizer, data.inputs.codes, modalities
+        )
+        provenance["pretrain_events_sha256"] = file_hash(dataset_dir / FULL_EVENTS_FILE)
     return FoldData(
         data,
         tokenizer,
@@ -209,6 +220,7 @@ def load_fold(dataset_dir: Path, models_dir: Path, config: dict[str, Any], fold:
         histories.index_of(fit),
         histories.index_of(held),
         provenance,
+        pretrain_histories,
     )
 
 
