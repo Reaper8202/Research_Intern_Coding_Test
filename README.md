@@ -8,9 +8,11 @@ Status: steps 1 to 3 are done. The CSV-only transformer (`small-v1`) is trained 
 training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
 multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
 MRI token from a 3-D CNN. A pre-registered tuning round (D35, `configs/budget.toml`) selected
-fine-tuning dropout 0.3 (`small-v1-mm-do03`). LightGBM remains about 0.014 AUROC stronger in
-training CV; the gap is reported. See [the project plan](docs/plan.md) and
-[model plan version 2.4](docs/model_plan.md).
+fine-tuning dropout 0.3 (`small-v1-mm-do03`). Round 2 (D36, `configs/budget_v2.toml`) removed three
+simulator clock codes and selected `small-v2-c1`: a pooled readout, extra supervised anchors, and
+target-weighted pretraining, averaged over three seeds. In training CV on the same clean inputs, its
+AUROC gap to LightGBM counts is -0.003 [-0.010, +0.005]. LightGBM stays ahead on mAP against its value
+features. See [the project plan](docs/plan.md) and [model plan version 2.5](docs/model_plan.md).
 
 The final model is a transformer trained from random weights on the supplied training data. Any
 self-pretraining uses only training histories before their anchors. External datasets and
@@ -103,6 +105,24 @@ make experiments                  # configs/budget.toml in order; resumable
 make experiments-summary          # reports/transformer/experiments.csv (section 5.3 rule)
 make lightgbm                     # E11 LightGBM baselines -> reports/lightgbm/
 ```
+
+Round 2 and the candidate's predictions (D36):
+
+```bash
+PYTHONPATH=src python -m ehrforecast.experiments run --budget configs/budget_v2.toml \
+    --dataset data/processed --models models/transformer --logs logs/round2
+PYTHONPATH=src python -m ehrforecast.experiments summarize --budget configs/budget_v2.toml \
+    --models models/transformer --reports reports/transformer/round2
+PYTHONPATH=src python -m ehrforecast.lightgbm_cv --dataset data/processed --models models \
+    --reports reports/lightgbm_clean --output-name lightgbm_clean \
+    --ensemble configs/experiments/v2_c1.toml configs/experiments/v2_c1_seed2.toml \
+    configs/experiments/v2_c1_seed3.toml
+PYTHONPATH=src python -m ehrforecast.predict --dataset data/processed --split test \
+    --run-dir models/transformer/small-v2-c1{,-seed2,-seed3}/fold{0,1,2,3,4}/F --out predictions.csv
+```
+
+The last command runs 15 models and takes about 6 minutes. `scripts/checks/` holds the one-off
+data checks behind D15, D31, and D36.
 
 Genotypes enter as `[DNA] dna:<site>:<variant alleles>` tokens. A scan enters as one `[IMG]`
 token only when its study date is before the anchor day. Coverage is small: genomics for 396

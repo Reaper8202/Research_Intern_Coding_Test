@@ -1,0 +1,217 @@
+{
+  "excluded_observations": [
+    "DALY",
+    "QALY",
+    "QOLS"
+  ],
+  "fixed_settings": {
+    "colsample_bytree": 0.5,
+    "deterministic": true,
+    "force_row_wise": true,
+    "learning_rate": 0.05,
+    "n_jobs": 4,
+    "random_state": 20261028,
+    "reg_lambda": 1.0,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "verbose": -1
+  },
+  "paired_bca_oof": {
+    "lightgbm_counts_minus_logreg_historical": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.03142136815109195,
+        "ci_low": 0.012338804856704317,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.02222774670469116
+      },
+      "macro_auroc": {
+        "ci_high": 0.037677402101775635,
+        "ci_low": 0.022089351497689008,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.030219209462839625
+      },
+      "macro_brier": {
+        "ci_high": -0.001307926049189944,
+        "ci_low": -0.001891784846334578,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0016047242645225931
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "lightgbm_counts_values_minus_logreg_historical": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.04497262105552846,
+        "ci_low": 0.02425438545976791,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.03540180178808813
+      },
+      "macro_auroc": {
+        "ci_high": 0.0359645017805604,
+        "ci_low": 0.018038034789674025,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.02756311097807207
+      },
+      "macro_brier": {
+        "ci_high": -0.0014543178049987466,
+        "ci_low": -0.0020843589872191273,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0017700994854659424
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    }
+  },
+  "pooled_oof": {
+    "counts": {
+      "mAP": 0.1883244625040627,
+      "macro_auroc": 0.7636718165005764,
+      "macro_brier": 0.03701455788049084,
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_patients": 2791,
+      "n_targets": 40,
+      "n_targets_auroc": 40,
+      "n_targets_average_precision": 40,
+      "n_targets_brier": 40,
+      "prior_mask_applied": true,
+      "scope": "all_patients"
+    },
+    "counts_values": {
+      "mAP": 0.20149851758745968,
+      "macro_auroc": 0.7610157180158088,
+      "macro_brier": 0.036849182659547494,
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_patients": 2791,
+      "n_targets": 40,
+      "n_targets_auroc": 40,
+      "n_targets_average_precision": 40,
+      "n_targets_brier": 40,
+      "prior_mask_applied": true,
+      "scope": "all_patients"
+    }
+  },
+  "scope": "training-split cross-validation; official val not read",
+  "selected": {
+    "counts": {
+      "fold_scores": [
+        {
+          "fold": 0,
+          "mAP": 0.23870208215640548,
+          "macro_auroc": 0.7632256202955536
+        },
+        {
+          "fold": 1,
+          "mAP": 0.21244476811321453,
+          "macro_auroc": 0.7683475906063093
+        },
+        {
+          "fold": 2,
+          "mAP": 0.19197101627560206,
+          "macro_auroc": 0.7696291610215845
+        },
+        {
+          "fold": 3,
+          "mAP": 0.19930924797447025,
+          "macro_auroc": 0.7679497299341481
+        },
+        {
+          "fold": 4,
+          "mAP": 0.22100782253999113,
+          "macro_auroc": 0.7769334829640658
+        }
+      ],
+      "grid_edge": [
+        "num_leaves",
+        "min_child_samples",
+        "n_estimators"
+      ],
+      "mean_cv_mAP": 0.21268698741193667,
+      "mean_cv_macro_auroc": 0.7692171169643323,
+      "min_child_samples": 20,
+      "n_estimators": 100,
+      "num_leaves": 4
+    },
+    "counts_values": {
+      "fold_scores": [
+        {
+          "fold": 0,
+          "mAP": 0.2297059987723805,
+          "macro_auroc": 0.7652472153473473
+        },
+        {
+          "fold": 1,
+          "mAP": 0.23970049066621382,
+          "macro_auroc": 0.7679770136993757
+        },
+        {
+          "fold": 2,
+          "mAP": 0.1952530962272945,
+          "macro_auroc": 0.7630403665001433
+        },
+        {
+          "fold": 3,
+          "mAP": 0.21207556235832867,
+          "macro_auroc": 0.7642349222679952
+        },
+        {
+          "fold": 4,
+          "mAP": 0.23507753419439995,
+          "macro_auroc": 0.7711183037371854
+        }
+      ],
+      "grid_edge": [
+        "num_leaves",
+        "min_child_samples",
+        "n_estimators"
+      ],
+      "mean_cv_mAP": 0.22236253644372347,
+      "mean_cv_macro_auroc": 0.7663235643104094,
+      "min_child_samples": 20,
+      "n_estimators": 100,
+      "num_leaves": 4
+    }
+  },
+  "value_bin_check": {
+    "status": "not run"
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "budget": "configs/budget_v2.toml",
+  "experiments": {
+    "A0-clean-base": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": -0.012985570993604223,
+        "mean_map_loss": 0.013975362898706305,
+        "passes_rule": false
+      }
+    },
+    "A1-clean-dropout03": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 0,
+        "mean_auroc_gain": -0.014342501347165392,
+        "mean_map_loss": 0.01530120001450257,
+        "passes_rule": false
+      }
+    },
+    "A2-dropout05": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain": -0.00624969281355916,
+        "mean_map_loss": 0.01983995531613692,
+        "passes_rule": false
+      }
+    },
+    "A3-pooled-readout": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.003025643424188096,
+        "mean_map_loss": -0.0046483853384867435,
+        "passes_rule": false
+      }
+    },
+    "C1-combination": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain": 0.00825331187293874,
+        "mean_map_loss": -0.010148582660004674,
+        "passes_rule": true
+      }
+    },
+    "F1-count-branch": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain": -0.0004956545516040078,
+        "mean_map_loss": -0.0007377131179574448,
+        "passes_rule": false
+      }
+    },
+    "F2-target-weights": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 1,
+        "mean_auroc_gain": -0.0012730039361529498,
+        "mean_map_loss": 0.008408122062284829,
+        "passes_rule": false
+      }
+    },
+    "P2a-full-timeline-parent": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": 0.0027703170648978315,
+        "mean_map_loss": -3.205220858683022e-05,
+        "passes_rule": false
+      }
+    },
+    "P2b-full-timeline-dropout03": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 5,
+        "mean_auroc_gain": 0.005029176387323408,
+        "mean_map_loss": -0.007462829482234534,
+        "passes_rule": true
+      }
+    },
+    "P3a-weighted-parent": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 3,
+        "mean_auroc_gain": 0.0011863454786521731,
+        "mean_map_loss": 0.00257948681449946,
+        "passes_rule": false
+      }
+    },
+    "P3b-weighted-parent-dropout03": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.0020230804563651896,
+        "mean_map_loss": 0.001617482537536502,
+        "passes_rule": false
+      }
+    },
+    "S2-C1-seed2": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain": -0.0021886169027292013,
+        "mean_map_loss": 0.006153607749674916,
+        "passes_rule": false
+      }
+    },
+    "S3-C1-seed3": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 2,
+        "mean_auroc_gain": -0.0002328262104113632,
+        "mean_map_loss": 0.008975855588393339,
+        "passes_rule": false
+      }
+    },
+    "X1-extra-anchors": {
+      "vs_incumbent": {
+        "folds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "folds_with_higher_auroc": 4,
+        "mean_auroc_gain": 0.004163093649403882,
+        "mean_map_loss": -0.0006806195785287128,
+        "passes_rule": false
+      }
+    }
+  },
+  "incumbent": {
+    "config": "small-v1-mm-do03",
+    "fold_scores": [
+      {
+        "fold": 0,
+        "mAP": 0.22071986078001612,
+        "macro_auroc": 0.7679458863312154
+      },
+      {
+        "fold": 1,
+        "mAP": 0.2139261015957068,
+        "macro_auroc": 0.7705296610254135
+      },
+      {
+        "fold": 2,
+        "mAP": 0.17904162181605832,
+        "macro_auroc": 0.7746388927135557
+      },
+      {
+        "fold": 3,
+        "mAP": 0.19918258389416002,
+        "macro_auroc": 0.7643892885525436
+      },
+      {
+        "fold": 4,
+        "mAP": 0.20374161856179063,
+        "macro_auroc": 0.7533922653530336
+      }
+    ]
+  },
+  "method": "F",
+  "passing": [
+    "P2b-full-timeline-dropout03",
+    "C1-combination"
+  ],
+  "rule": "mean AUROC gain >= 0.005, >= 4 of 5 folds higher, mean mAP loss <= 0.005",
+  "scope": "training-split cross-validation; official val not read",
+  "seed_stability": null
+}

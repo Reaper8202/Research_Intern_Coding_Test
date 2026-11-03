@@ -129,6 +129,10 @@ these rows. After the cut, 49 training, 3 val, and 6 test rows (22, 1, and 3 pat
 No other interval table has such a row in any split. In the typical case, the invalid row is a
 second prescription of the same drug, from the same encounter, inside a valid prescription.
 
+**Which field is wrong (`scripts/checks/medication_stops.py`, training patients).** The start
+falls on an encounter day of that patient in 57 of 57 invalid rows and in 97.8% of valid rows. The
+stop does so in 8 of 57 invalid rows and in 95.8% of valid rows. So the stop is the wrong field.
+
 **Reason.** The start is a real prescription event; only its stop date is impossible. Each stop
 is linked to its start only through its own row. Other prescriptions of the same patient and drug
 cannot identify the correct stop: 1,579 train/val rows share a patient and code with an invalid
@@ -234,6 +238,8 @@ SMOKE_CONFIG=configs/smoke_mm.toml` passed with images and genotypes in the inpu
 
 ## D35. Tuning round outcome: fine-tuning dropout 0.3 is selected
 
+D36 replaces this selection as the candidate. This configuration stays as the fallback.
+
 **Decision.** The selected configuration is `small-v1-mm-do03`: the multimodal model (D34) with
 method F and fine-tuning dropout 0.3 (`configs/experiments/mm_dropout03.toml`). It fine-tunes
 from the incumbent's self-pretraining; only the fine-tuning dropout and head dropout change.
@@ -286,3 +292,99 @@ E0-seed3 fold 3 was resumed from its epoch-6 checkpoint after the 18:10 restart 
 resume path). Its first wandb session ends with an incomplete record, so wandb shows that
 run's steps out of order; its `metrics.jsonl` is the authoritative record. Pooled out-of-fold AUROC (0.760 for T1) is lower than the mean fold AUROC (0.766)
 because pooling mixes fold-specific probability scales.
+
+## D36. Round 2: simulator clock codes removed; C1 with three seeds is the candidate
+
+**Decision.** The candidate is `small-v2-c1` with three seeds (`configs/experiments/v2_c1.toml`,
+`v2_c1_seed2.toml`, `v2_c1_seed3.toml`). It averages 15 fold models. Against D35 it has four
+changes: DALY, QALY, and QOLS leave the inputs; the head reads the last event and the mean event;
+each fit patient gives one extra supervised example per epoch from an earlier cut day; and target
+diagnoses weigh 5 in the pretraining loss. D16 stays in force: pretraining reads pre-anchor
+histories only. The author reviews this choice before P4e.
+
+**Why the three codes leave.** DALY, QALY, and QOLS are simulator scores recorded yearly from 2011
+to 2021, so their counts work as a calendar clock. They predict an anchor before 2015 with AUROC
+0.999 (`scripts/checks/clock_scan.py`). Of those 1,219 training patients, 1,155 died, and they have
+more new diagnoses (2.37 against 1.48 per patient). All these rows are before the anchor, so this
+is not a future leak. The problem is validity: the model reads how the anchor was built, not a
+clinical state. Removal costs score: A1 trails the D35 model by 0.0143 AUROC and 0.0153 mAP, and
+LightGBM counts falls from 0.773 to 0.764 pooled AUROC. The test files contain the codes too (1,081
+DALY rows), so removal can lower the hidden score. An era signal remains in clinical codes and age
+(AUROC 0.865). It is kept, because it cannot be removed without removing clinical history, and it
+is reported below.
+
+**Round.** `configs/budget_v2.toml`. Each block was committed before its scores (15d569d, 6791ab2,
+ed19115, bce43e9, 02e8074, dedc88e). Rule: section 5.3, against A1 unless stated. Training CV only;
+official val was not read.
+
+| Run | Change | AUROC | mAP | AUROC gain | Folds higher | mAP gain | Result |
+|---|---|---|---|---|---|---|---|
+| A0 | clean inputs (against `small-v1-mm`) | 0.7461 | 0.1831 | -0.0130 | 1 | -0.0140 | measures the cost |
+| A1 | A0 with dropout 0.3 (against D35) | 0.7518 | 0.1880 | -0.0143 | 0 | -0.0153 | reference |
+| A2 | dropout 0.5 | 0.7456 | 0.1682 | -0.0062 | 2 | -0.0198 | fails |
+| A3 | last plus mean readout | 0.7549 | 0.1927 | +0.0030 | 4 | +0.0046 | fails, enters C1 |
+| X1 | extra anchors | 0.7560 | 0.1887 | +0.0042 | 4 | +0.0007 | fails, enters C1 |
+| P2a | full-timeline parent (against A0) | 0.7489 | 0.1832 | +0.0028 | 3 | +0.0000 | fails |
+| P2b | fine-tune from P2a | 0.7569 | 0.1955 | +0.0050 | 5 | +0.0075 | passes, not adopted |
+| F1 | count branch | 0.7513 | 0.1888 | -0.0005 | 2 | +0.0007 | fails |
+| F2 | per-target loss weights | 0.7506 | 0.1796 | -0.0013 | 1 | -0.0084 | fails |
+| P3a | target-weighted parent (against A0) | 0.7473 | 0.1806 | +0.0012 | 3 | -0.0026 | fails |
+| P3b | fine-tune from P3a | 0.7539 | 0.1864 | +0.0020 | 4 | -0.0016 | fails, enters C1 |
+| C1 | A3 + X1 + P3b | 0.7601 | 0.1982 | +0.0083 | 5 | +0.0101 | passes |
+
+**Combination.** The component test was: mean AUROC gain above 0, higher on at least 4 of 5 folds,
+mean mAP loss at most 0.005. C1 joins the components that pass, then needs the section 5.3 rule by
+itself. Pooled out of fold, paired patient BCa 95%: C1 minus A1 is AUROC +0.010 [+0.003, +0.018]
+and mAP +0.006 [-0.002, +0.014].
+
+**Full-timeline pretraining is not adopted.** P2b passes the rule, but it reads post-anchor events
+of fit patients, and the task says "Truncate the timeline at the anchor". Held-out, val, and test
+patients stay out and inputs stay cut, so no held-out score is contaminated. The gain does not
+justify departing from the written instruction, so D16 stands. No combination with this parent ran.
+
+**Seeds.** Each seed runs its own pretraining. Mean fold AUROC is 0.7601, 0.7579, and 0.7599; mean
+mAP is 0.1982, 0.1920, and 0.1892. Per-fold AUROC range is 0.0035 to 0.0144. The seed mean against
+A1 is +0.0074 AUROC, 5 of 5 folds, mAP +0.0051 (A1 has one seed).
+
+**Three-seed ensemble (`reports/lightgbm_clean/ensemble_comparison.json`).** Pooled out of fold:
+AUROC 0.7607, mAP 0.1809. Mean fold: AUROC 0.7653, mAP 0.2036. All intervals are paired patient BCa
+95%, with AUROC first and mAP second:
+
+| Ensemble minus | AUROC | mAP | Brier |
+|---|---|---|---|
+| its first member | +0.006 [+0.001, +0.011] | +0.010 [+0.005, +0.016] | -0.0007 [-0.0009, -0.0006] |
+| clean LightGBM counts | -0.003 [-0.010, +0.005] | -0.007 [-0.017, +0.002] | +0.0005 [+0.0002, +0.0007] |
+| clean LightGBM counts + values | -0.000 [-0.009, +0.007] | -0.021 [-0.031, -0.011] | +0.0006 [+0.0003, +0.0009] |
+
+The AUROC gap to LightGBM is no longer distinguishable from zero. LightGBM stays ahead on mAP
+against the value features, and it is better calibrated.
+
+**By anchor era.**
+
+| Anchor | Patients | Ensemble AUROC, mAP | LightGBM counts AUROC, mAP |
+|---|---|---|---|
+| before 2015 | 1,219 | 0.740, 0.200 | 0.736, 0.210 |
+| from 2015 | 1,572 | 0.771, 0.142 | 0.781, 0.139 |
+
+**By condition (`reports/lightgbm_clean/ensemble_per_target.csv`).** Ten targets stay near chance
+(mean AUROC 0.544): sprains, lacerations, concussion, whiplash, wrist fracture, strep throat, and
+sinusitis. They are acute events, and the history before the anchor holds little about them. The
+ensemble is higher on 19 of 40 targets. Its largest win is stroke (0.854 against 0.758). Its largest
+losses are myocardial infarction (0.808 against 0.885), pathological fracture (0.874 against 0.928),
+colon polyp (0.807 against 0.859), and rectal polyp (0.823 against 0.874). These losses are on the
+count-driven conditions, and the count branch (F1) did not close them.
+
+**The 0.80 question.** A macro AUROC of 0.80 needs the other 30 targets to average 0.885. They
+average 0.833. Best-per-target over all models reaches 0.777 on clean inputs. CV 0.80 is not a goal
+of this work, and the round stopped at its written limit without reaching it.
+
+**Related check on D15 (`scripts/checks/race_check.py`).** LightGBM counts with race and ethnicity
+minus without: AUROC -0.002 [-0.004, +0.001], mAP +0.001 [-0.001, +0.005]. So D15 costs no
+measurable score.
+
+**Caveats.** C1 is the best of 12 configurations after the 11 in D35, on the same folds, so its CV
+score is optimistic. A3 and X1 scores were known when the component test was written; F1, F2, and
+P3b scores were not. All three components failed the rule alone, so the component test is more
+lenient than the rule. Best epochs are chosen on the held-out fold, which adds about 0.003. The
+ensemble is three fits per patient against one LightGBM fit, and a bagged LightGBM was not tested.
+Only the single P4e val check and the hidden test correct these effects.

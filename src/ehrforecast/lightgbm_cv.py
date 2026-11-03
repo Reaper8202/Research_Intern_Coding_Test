@@ -80,6 +80,9 @@ FIXED: dict[str, Any] = {
 
 # This module must not import PyTorch: PyTorch and LightGBM each link a ``libomp.dylib`` on macOS,
 # and two OpenMP runtimes in one process can crash. The transformer predictions are read directly.
+CLOCK_YEAR = 2015  # D36: anchors before this year almost always mean the patient died
+
+
 def transformer_oof(
     models_dir: Path, config_path: Path, assignments: pd.DataFrame
 ) -> tuple[str, pd.DataFrame]:
@@ -440,6 +443,28 @@ def compare_ensemble(
         out[f"minus_lightgbm_{feature_set}"] = bootstrap_comparison(
             labels, ensemble, codes, other=saved.loc[labels.index], prior=prior, n_boot=n_boot
         )
+    counts = pd.read_parquet(models_dir / output_name / "oof_counts.parquet").loc[labels.index]
+    anchors = data.inputs.cohort.loc[labels.index, "anchor_date"]
+    out["anchor_era"] = {}
+    for era, patients in (
+        (f"before_{CLOCK_YEAR}", labels.index[anchors.dt.year < CLOCK_YEAR]),
+        (f"from_{CLOCK_YEAR}", labels.index[anchors.dt.year >= CLOCK_YEAR]),
+    ):
+        subset = (labels.loc[patients], prior.loc[patients])
+        out["anchor_era"][era] = {
+            "patients": len(patients),
+            "ensemble": evaluate_predictions(
+                subset[0], ensemble.loc[patients], codes, prior=subset[1]
+            ).summary,
+            "lightgbm_counts": evaluate_predictions(
+                subset[0], counts.loc[patients], codes, prior=subset[1]
+            ).summary,
+        }
+    per_target = evaluate_predictions(labels, ensemble, codes, prior=prior).per_target.join(
+        evaluate_predictions(labels, counts, codes, prior=prior).per_target,
+        rsuffix="_lightgbm_counts",
+    )
+    per_target.to_csv(reports_dir / "ensemble_per_target.csv")
     write_json(reports_dir / "ensemble_comparison.json", out)
     return out
 

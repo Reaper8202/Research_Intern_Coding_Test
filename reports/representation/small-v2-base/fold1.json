@@ -1,0 +1,260 @@
+{
+  "M1_refill_gaps_fit": {
+    "exactly_0": 156601,
+    "no_later_start": 2742,
+    "other_stops": 159930,
+    "over_0_to_1": 0,
+    "over_1_to_2": 0,
+    "over_2_to_7": 15,
+    "over_30_to_365": 287,
+    "over_365_to_inf": 218,
+    "over_7_to_30": 67,
+    "zero_length_stops": 10654
+  },
+  "M8_pretraining": {
+    "history_tokens": 592772,
+    "optimizer_steps_per_epoch": 70,
+    "patients_with_history": 2233,
+    "patients_with_several_window_starts": 102,
+    "window_starts_max": 959,
+    "windows_per_epoch": 2233
+  },
+  "config": "small-v2-base",
+  "fit": {
+    "days_since_last_event": {
+      "max": 15522.0,
+      "median": 41.0,
+      "min": 1.0,
+      "p90": 308.0,
+      "p99": 1056.52
+    },
+    "density_tertile_edges": [
+      3.41,
+      6.14
+    ],
+    "empty_histories": 0,
+    "event_tokens_lost_fraction": 0.1834,
+    "history_tokens": {
+      "max": 7525.0,
+      "median": 162.0,
+      "min": 4.0,
+      "p90": 354.0,
+      "p99": 1761.44
+    },
+    "lost_fraction_by_source": {
+      "allergies": 0.0155,
+      "careplans": 0.0495,
+      "conditions": 0.0729,
+      "devices": 0.0443,
+      "encounters": 0.2564,
+      "imaging_studies": 0.0612,
+      "immunizations": 0.0136,
+      "medications": 0.4187,
+      "observations": 0.1517,
+      "procedures": 0.2105
+    },
+    "n_patients": 2233,
+    "partial_day_patients": 0,
+    "positives_by_group": {
+      "density_high": {
+        "label_positives": 1276,
+        "patients": 744
+      },
+      "density_low": {
+        "label_positives": 1446,
+        "patients": 745
+      },
+      "density_middle": {
+        "label_positives": 1447,
+        "patients": 744
+      },
+      "empty": {
+        "label_positives": 0,
+        "patients": 0
+      },
+      "not_truncated": {
+        "label_positives": 3939,
+        "patients": 2131
+      },
+      "truncated": {
+        "label_positives": 230,
+        "patients": 102
+      }
+    },
+    "sequence_length": {
+      "max": 1024.0,
+      "median": 167.0,
+      "min": 7.0,
+      "p90": 366.8,
+      "p99": 1024.0
+    },
+    "summary_at_cap": 0,
+    "summary_coverage": 1.0,
+    "summary_tokens": {
+      "max": 23.0,
+      "median": 0.0,
+      "min": 0.0,
+      "p90": 0.0,
+      "p99": 16.0
+    },
+    "truncated_fraction": 0.0457,
+    "truncated_history_years_median": 65.79,
+    "truncated_patients": 102,
+    "truncated_retained_years_median": 3.98,
+    "unknown_rate_by_source": {
+      "allergies": 0.00883,
+      "careplans": 0.00122,
+      "conditions": 0.00265,
+      "devices": 0.00633,
+      "encounters": 0.00241,
+      "imaging_studies": 0.0,
+      "immunizations": 0.00071,
+      "medications": 0.00342,
+      "observations": 2e-05,
+      "procedures": 0.00836
+    }
+  },
+  "fit_patients": 2233,
+  "fold": 1,
+  "held": {
+    "days_since_last_event": {
+      "max": 13410.0,
+      "median": 40.5,
+      "min": 1.0,
+      "p90": 322.0,
+      "p99": 1102.35
+    },
+    "density_tertile_edges": [
+      3.55,
+      6.9
+    ],
+    "empty_histories": 0,
+    "event_tokens_lost_fraction": 0.1339,
+    "history_tokens": {
+      "max": 5666.0,
+      "median": 166.5,
+      "min": 4.0,
+      "p90": 361.8,
+      "p99": 1616.03
+    },
+    "lost_fraction_by_source": {
+      "allergies": 0.0204,
+      "careplans": 0.0499,
+      "conditions": 0.0679,
+      "devices": 0.0392,
+      "encounters": 0.2198,
+      "imaging_studies": 0.0421,
+      "immunizations": 0.0106,
+      "medications": 0.227,
+      "observations": 0.1104,
+      "procedures": 0.1288
+    },
+    "n_patients": 558,
+    "partial_day_patients": 0,
+    "positives_by_group": {
+      "density_high": {
+        "label_positives": 329,
+        "patients": 186
+      },
+      "density_low": {
+        "label_positives": 350,
+        "patients": 186
+      },
+      "density_middle": {
+        "label_positives": 366,
+        "patients": 186
+      },
+      "empty": {
+        "label_positives": 0,
+        "patients": 0
+      },
+      "not_truncated": {
+        "label_positives": 993,
+        "patients": 532
+      },
+      "truncated": {
+        "label_positives": 52,
+        "patients": 26
+      }
+    },
+    "sequence_length": {
+      "max": 1024.0,
+      "median": 169.5,
+      "min": 6.0,
+      "p90": 372.9,
+      "p99": 1023.43
+    },
+    "summary_at_cap": 0,
+    "summary_coverage": 1.0,
+    "summary_tokens": {
+      "max": 22.0,
+      "median": 0.0,
+      "min": 0.0,
+      "p90": 0.0,
+      "p99": 15.86
+    },
+    "truncated_fraction": 0.0466,
+    "truncated_history_years_median": 60.51,
+    "truncated_patients": 26,
+    "truncated_retained_years_median": 3.98,
+    "unknown_rate_by_source": {
+      "allergies": 0.02041,
+      "careplans": 0.00098,
+      "conditions": 0.00293,
+      "devices": 0.0,
+      "encounters": 0.00691,
+      "imaging_studies": 0.0,
+      "immunizations": 0.0,
+      "medications": 0.00826,
+      "observations": 0.0003,
+      "procedures": 0.00602
+    }
+  },
+  "held_patients": 558,
+  "modalities": {
+    "fit": {
+      "genotype_tokens_max": 39,
+      "patients": 2233,
+      "with_genotype_tokens": 318,
+      "with_prescan_image": 160
+    },
+    "genotype_vocabulary": 115,
+    "held": {
+      "genotype_tokens_max": 37,
+      "patients": 558,
+      "with_genotype_tokens": 78,
+      "with_prescan_image": 40
+    }
+  },
+  "refill_pairs_merged_fit": 156601,
+  "tokenizer_sha256": "b9b8ee9840891acbf8fa8f3bda7f081b730c86c3371bca156ef690483557526c",
+  "vocabulary": {
+    "eligible_base_codes": 585,
+    "numeric_bins_fallback": 5,
+    "numeric_bins_total": 650,
+    "numeric_groups": 100,
+    "numeric_groups_all_fallback": 4,
+    "size": 1935,
+    "text_values": 52,
+    "tokens_by_kind": {
+      "[DNA": 1,
+      "[IMG": 1,
+      "[PAD": 1,
+      "[SEP": 1,
+      "[SEX": 2,
+      "[UNK": 10,
+      "allergies": 28,
+      "careplans": 62,
+      "cond": 244,
+      "devices": 6,
+      "dna": 115,
+      "enc": 46,
+      "hx": 122,
+      "img": 12,
+      "imm": 11,
+      "med": 202,
+      "obs": 955,
+      "proc": 116
+    }
+  }
+}
