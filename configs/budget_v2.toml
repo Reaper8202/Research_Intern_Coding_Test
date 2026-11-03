@@ -122,3 +122,19 @@ id = "C1-combination"
 config = "configs/experiments/v2_c1.toml"
 reference = "configs/experiments/v2_do03.toml"
 folds = [0, 1, 2, 3, 4]
+
+# Added on 3 November 2026 at 01:33. C1 passes the rule against A1: +0.0083 AUROC, 5 of 5 folds, mAP
+# +0.0101; fold mean 0.7601 and 0.1982. These are the last runs of the round: two seeds of C1, for
+# the seed spread and a measured ensemble. They are not candidates, so they select nothing.
+
+[[experiment]]
+id = "S2-C1-seed2"
+config = "configs/experiments/v2_c1_seed2.toml"
+reference = "configs/experiments/v2_c1.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "S3-C1-seed3"
+config = "configs/experiments/v2_c1_seed3.toml"
+reference = "configs/experiments/v2_c1.toml"
+folds = [0, 1, 2, 3, 4]
