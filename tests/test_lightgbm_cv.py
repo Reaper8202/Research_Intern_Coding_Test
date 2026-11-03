@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from ehrforecast.lightgbm_cv import latest_values, select_setting, value_features
+from ehrforecast.lightgbm_cv import ensemble_oof, latest_values, select_setting, value_features
 
 
 def _events(rows: list[tuple[str, str, float, str, str]]) -> pd.DataFrame:
@@ -125,3 +127,23 @@ def test_selection_uses_mean_auroc_and_flags_grid_edges() -> None:
         300,
     )
     assert choice["grid_edge"] == ["min_child_samples"]
+
+
+def _write_member(models: Path, name: str, values: dict[str, float]) -> Path:
+    config = models / f"{name}.toml"
+    config.write_text(f'name = "{name}"\n')
+    for fold in range(5):
+        run = models / "transformer" / name / f"fold{fold}" / "F"
+        run.mkdir(parents=True)
+        frame = pd.DataFrame({"1": [values[f"p{fold}"]]}, index=[f"p{fold}"])
+        frame.to_parquet(run / "held_predictions_best.parquet")
+    return config
+
+
+def test_ensemble_is_the_patient_level_mean_of_its_members(tmp_path: Path) -> None:
+    assignments = pd.DataFrame({"patient_id": [f"p{k}" for k in range(5)], "fold": list(range(5))})
+    first = _write_member(tmp_path, "a", {f"p{k}": 0.2 for k in range(5)})
+    second = _write_member(tmp_path, "b", {f"p{k}": 0.4 + k / 10 for k in range(5)})
+    mean = ensemble_oof(tmp_path, [first, second], assignments)
+    assert mean.loc["p3", "1"] == pytest.approx((0.2 + 0.7) / 2)
+    assert mean.loc["p0", "1"] == pytest.approx((0.2 + 0.4) / 2)

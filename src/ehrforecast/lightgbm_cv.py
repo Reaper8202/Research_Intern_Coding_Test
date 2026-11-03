@@ -387,6 +387,63 @@ def compare_saved(
     return out
 
 
+def ensemble_oof(models_dir: Path, configs: list[Path], assignments: pd.DataFrame) -> pd.DataFrame:
+    """Mean held-out F probability over configurations, such as the seeds of one model."""
+    frames = [transformer_oof(models_dir, config, assignments)[1] for config in configs]
+    first = frames[0]
+    if any(
+        set(f.index) != set(first.index) or set(f.columns) != set(first.columns) for f in frames
+    ):
+        raise ValueError("the ensemble members hold different patients or targets")
+    return pd.concat([f.loc[first.index, first.columns] for f in frames]).groupby(level=0).mean()
+
+
+def compare_ensemble(
+    dataset_dir: Path,
+    models_dir: Path,
+    reports_dir: Path,
+    configs: list[Path],
+    n_boot: int,
+    output_name: str = "lightgbm",
+) -> dict[str, Any]:
+    """Seed ensemble against its first member and the saved LightGBM predictions."""
+    data = load_training_data(dataset_dir)
+    labels, prior, codes = data.labels, data.inputs.prior, data.inputs.codes
+    assignments = load_folds(dataset_dir)
+    ensemble = ensemble_oof(models_dir, configs, assignments).loc[labels.index]
+    members = {}
+    for config in configs:
+        name, member = transformer_oof(models_dir, config, assignments)
+        members[name] = evaluate_predictions(
+            labels, member.loc[labels.index], codes, prior=prior
+        ).summary
+    folds = []
+    for fold in range(N_FOLDS):
+        _, held = fold_patients(assignments, fold)
+        folds.append(
+            evaluate_predictions(
+                labels.loc[held], ensemble.loc[held], codes, prior=prior.loc[held]
+            ).summary
+        )
+    first = transformer_oof(models_dir, configs[0], assignments)[1].loc[labels.index]
+    out: dict[str, Any] = {
+        "scope": "training-split cross-validation; official val not read",
+        "members": members,
+        "pooled": evaluate_predictions(labels, ensemble, codes, prior=prior).summary,
+        "fold_scores": folds,
+        "minus_first_member": bootstrap_comparison(
+            labels, ensemble, codes, other=first, prior=prior, n_boot=n_boot
+        ),
+    }
+    for feature_set in ("counts", "counts_values"):
+        saved = pd.read_parquet(models_dir / output_name / f"oof_{feature_set}.parquet")
+        out[f"minus_lightgbm_{feature_set}"] = bootstrap_comparison(
+            labels, ensemble, codes, other=saved.loc[labels.index], prior=prior, n_boot=n_boot
+        )
+    write_json(reports_dir / "ensemble_comparison.json", out)
+    return out
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", type=Path, required=True)
@@ -400,6 +457,13 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="transformer configs to compare with the saved LightGBM predictions (no refit)",
     )
+    parser.add_argument(
+        "--ensemble",
+        type=Path,
+        nargs="+",
+        default=None,
+        help="seeds of one transformer: score their mean against the saved LightGBM predictions",
+    )
     parser.add_argument("--exclude-observations", nargs="*", default=[])
     parser.add_argument("--feature-sets", nargs="+", default=list(FEATURE_SETS))
     parser.add_argument("--output-name", default="lightgbm")
@@ -407,6 +471,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--log-file", type=Path, default=None)
     args = parser.parse_args(argv)
     setup_logging(args.log_file)
+    if args.ensemble:
+        compare_ensemble(
+            args.dataset, args.models, args.reports, args.ensemble, args.n_boot, args.output_name
+        )
+        return
     if args.compare_only:
         compare_saved(
             args.dataset,
