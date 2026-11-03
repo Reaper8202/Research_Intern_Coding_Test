@@ -375,8 +375,8 @@ colon polyp (0.807 against 0.859), and rectal polyp (0.823 against 0.874). These
 count-driven conditions, and the count branch (F1) did not close them.
 
 **The 0.80 question.** A macro AUROC of 0.80 needs the other 30 targets to average 0.885. They
-average 0.833. Best-per-target over all models reaches 0.777 on clean inputs. CV 0.80 is not a goal
-of this work, and the round stopped at its written limit without reaching it.
+average 0.833. Taking the better of the ensemble and LightGBM counts for each target gives only 0.774. CV 0.80
+is not a goal of this work, and the round stopped at its written limit without reaching it.
 
 **Related check on D15 (`scripts/checks/race_check.py`).** LightGBM counts with race and ethnicity
 minus without: AUROC -0.002 [-0.004, +0.001], mAP +0.001 [-0.001, +0.005]. So D15 costs no
