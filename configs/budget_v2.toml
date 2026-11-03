@@ -112,3 +112,13 @@ folds = [0, 1, 2, 3, 4]
 # P2b passes the rule (+0.0050, 5 of 5 folds, mAP +0.0075), but it reads post-anchor events of fit
 # patients, and the task says "Truncate the timeline at the anchor". It stays out of C1. A second
 # combination with the full-timeline parent runs only if Derek approves the reversal of D16.
+
+# Added on 3 November 2026 at 00:52, before any score of C1. Component test results against A1:
+# A3 +0.0030 (4 of 5, mAP +0.0046): in. X1 +0.0042 (4 of 5, mAP +0.0007): in. P3b +0.0020 (4 of 5,
+# mAP -0.0016): in. F1 -0.0005 (2 of 5): out. F2 -0.0013 (1 of 5): out. P2b: out, as written above.
+
+[[experiment]]
+id = "C1-combination"
+config = "configs/experiments/v2_c1.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
