@@ -21,6 +21,9 @@ anchor, so every label comes from permitted history. Held-out scoring uses real 
 Cut days come from the latest allowed five years, which keeps these examples near the real age.
 A head input marks them (the plan's early indicator); it is 0 for every real anchor and at
 prediction, so their lower base rates do not move real predictions.
+
+Optional count branch: a sample can also list each token of its visible history with
+log(1 + count). This covers events older than the retained window, and nothing after the cut.
 """
 
 from __future__ import annotations
@@ -57,6 +60,7 @@ class SequenceConfig:
     max_summary: int = 128
     age_sex_head: bool = False
     landmark_flag: bool = False
+    count_branch: bool = False
 
     @property
     def n_head_features(self) -> int:
@@ -83,6 +87,8 @@ class Sample:
     n_summary: int = 0
     n_candidates: int = 0
     image: np.ndarray | None = None  # the volume behind this sample's ``[IMG]`` token
+    count_ids: np.ndarray | None = None  # distinct tokens of the visible history
+    count_weights: np.ndarray | None = None  # log(1 + count) of each distinct token
 
     @property
     def n_events(self) -> int:
@@ -190,6 +196,16 @@ class Histories:
             ages = np.append(ages, day / DAYS_PER_YEAR)
         return tokens, ages
 
+    def _counts(
+        self, i: int, stop: int, config: SequenceConfig
+    ) -> tuple[np.ndarray | None, np.ndarray | None]:
+        """Distinct tokens among the first ``stop`` tokens of the history, with log counts."""
+        if not config.count_branch:
+            return None, None
+        base = int(self.token_offsets[i])
+        ids, counts = np.unique(self.tokens[base : base + stop], return_counts=True)
+        return ids.astype("int64"), np.log1p(counts).astype("float32")
+
     def _image(self, i: int, static: np.ndarray) -> np.ndarray | None:
         if self.image_id < 0 or self.image_id not in static:
             return None
@@ -227,6 +243,7 @@ class Histories:
             ]
         ).astype("float32")
         n_prefix = len(static) + len(hx_tokens) + 2
+        count_ids, count_weights = self._counts(i, stop, config)
         return Sample(
             tokens=tokens,
             ages=ages,
@@ -239,6 +256,8 @@ class Histories:
             n_summary=len(hx_tokens),
             n_candidates=int((self._hx(i)[1] < day_values[first_day]).sum()),
             image=self._image(i, static),
+            count_ids=count_ids,
+            count_weights=count_weights,
         )
 
     def head_features(self, i: int, age_sex: bool = False) -> np.ndarray:
@@ -262,7 +281,10 @@ class Histories:
         sex = self.sex_ids[int(self.male[i])]
         static, static_ages = self._static(i, None)
         n_prefix = len(static) + 2
+        count_ids, count_weights = self._counts(i, 0, config)
         return Sample(
+            count_ids=count_ids,
+            count_weights=count_weights,
             tokens=np.concatenate([[sex], static, [self.sep_id]]).astype("int64"),
             ages=np.concatenate([[0.0], static_ages, [0.0]]).astype("float32"),
             sources=np.full(n_prefix, -1, dtype="int64"),

@@ -77,6 +77,7 @@ def sequence_config(config: dict[str, Any]) -> SequenceConfig:
         int(rep["max_summary_tokens"]),
         bool(config["model"].get("age_sex_head", False)),
         int(config["finetune"].get("extra_anchors", 0)) > 0,
+        bool(config["model"].get("count_branch", False)),
     )
 
 
@@ -93,6 +94,7 @@ def model_config(config: dict[str, Any], tokenizer: FoldTokenizer, n_targets: in
         n_targets=n_targets,
         n_head_features=sequence_config(config).n_head_features,
         readout=str(m.get("readout", "last")),
+        count_branch=bool(m.get("count_branch", False)),
         image_token_id=tokenizer.token_id(IMG) if tokenizer.imaging else -1,
     )
 
@@ -264,6 +266,17 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
         "head": torch.from_numpy(np.stack([s.head for s in samples])).to(device),
         "event_mask": torch.from_numpy(event_mask).to(device),
     }
+    if samples[0].count_ids is not None:
+        size = max(max(len(s.count_ids) for s in samples if s.count_ids is not None), 1)
+        count_ids = np.zeros((n, size), dtype="int64")  # [PAD] with weight 0
+        count_weights = np.zeros((n, size), dtype="float32")
+        for b, s in enumerate(samples):
+            if s.count_ids is None or s.count_weights is None:
+                raise ValueError("every sample of a batch needs the count inputs")
+            count_ids[b, : len(s.count_ids)] = s.count_ids
+            count_weights[b, : len(s.count_weights)] = s.count_weights
+        batch["count_ids"] = torch.from_numpy(count_ids).to(device)
+        batch["count_weights"] = torch.from_numpy(count_weights).to(device)
     images = [s.image for s in samples if s.image is not None]
     if images:
         stacked = np.stack(images).astype("float32")[:, None]
@@ -273,17 +286,42 @@ def collate(samples: Sequence[Sample], device: torch.device) -> dict[str, torch.
 
 # ---------------------------------------------------------------------- losses
 def next_token_loss_sum(
-    model: EHRTransformer, batch: dict[str, torch.Tensor]
+    model: EHRTransformer,
+    batch: dict[str, torch.Tensor],
+    token_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, int]:
-    """Summed cross-entropy over eligible target positions and their count."""
+    """Summed cross-entropy over eligible target positions and their count.
+
+    ``token_weights`` (vocabulary size) can weight the target tokens. The count stays unweighted.
+    """
     eligible = batch["targets"] != IGNORE
     count = int(eligible.sum())
     states = model.hidden(batch["tokens"], batch["ages"], batch.get("images"))[eligible]
     if count == 0:
         return states.sum() * 0.0, 0
     logits = model.next_token_logits(states)
-    loss = torch.nn.functional.cross_entropy(logits, batch["targets"][eligible], reduction="sum")
-    return loss, count
+    targets = batch["targets"][eligible]
+    if token_weights is not None:
+        losses = torch.nn.functional.cross_entropy(logits, targets, reduction="none")
+        return (losses * token_weights[targets]).sum(), count
+    return torch.nn.functional.cross_entropy(logits, targets, reduction="sum"), count
+
+
+def target_loss_weights(labels: np.ndarray, unmasked: np.ndarray) -> np.ndarray:
+    """Inverse square root of each target's fit prevalence, with mean 1 over the targets.
+
+    Macro AUROC counts each target once, but plain binary cross-entropy favours common targets.
+    Fit patients only. A target without a positive among them takes the largest weight in use.
+    """
+    positives = (labels * unmasked).sum(axis=0)
+    prevalence = positives / np.maximum(unmasked.sum(axis=0), 1.0)
+    known = prevalence > 0
+    if not known.any():
+        return np.ones(labels.shape[1], dtype="float32")
+    weights = np.zeros(labels.shape[1], dtype="float64")
+    weights[known] = 1.0 / np.sqrt(prevalence[known])
+    weights[~known] = weights[known].max()
+    return (weights / weights.mean()).astype("float32")
 
 
 def supervised_loss_sum(

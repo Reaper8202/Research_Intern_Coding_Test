@@ -8,6 +8,9 @@
   one linear layer with 40 logits. A patient without clinical events gets a zero state.
 * Optional readout ``last_mean`` (D36 round): the last-event state joined with the mean state of
   all clinical events, so the head also sees a summary of the whole retained history.
+* Optional count branch: a log-count-weighted sum of the model's own token embeddings over the
+  visible history, passed through one hidden layer to the head. It lets the head see how often
+  each event occurred, including events older than the retained window.
 * Image encoder (D34, only when the tokenizer has ``[IMG]``): a four-layer 3-D CNN from random
   weights maps a standardized brain volume to one ``d_model`` vector. That vector replaces the
   ``[IMG]`` token embedding, so the image enters attention like any other input token.
@@ -43,6 +46,7 @@ class ModelConfig:
     rope_base: float = 10_000.0
     image_token_id: int = -1  # -1: no image encoder
     readout: str = "last"  # "last" or "last_mean"
+    count_branch: bool = False
 
     def __post_init__(self) -> None:
         if self.d_model % self.n_heads or (self.d_model // self.n_heads) % 2:
@@ -87,6 +91,9 @@ class Block(nn.Module):
         return x + self.drop(self.fc_out(F.gelu(self.fc_in(self.ln2(x)))))
 
 
+COUNT_SCALE = 0.1  # keeps the summed embeddings near the size of a hidden state
+
+
 class ImageEncoder(nn.Module):
     """(N, 1, S, S, S) standardized volumes -> (N, d_model). Strided convolutions, mean pooling."""
 
@@ -109,6 +116,7 @@ class EHRTransformer(nn.Module):
     output_mask: torch.Tensor
     blocks: nn.ModuleList
     image_encoder: ImageEncoder | None
+    count_mlp: nn.Sequential | None
 
     def __init__(self, config: ModelConfig, input_only_ids: torch.Tensor | None = None) -> None:
         super().__init__()
@@ -121,6 +129,12 @@ class EHRTransformer(nn.Module):
         self.ln_final = nn.LayerNorm(d)
         self.head_dropout = nn.Dropout(config.head_dropout)
         state_size = 2 * d if config.readout == "last_mean" else d
+        state_size += d if config.count_branch else 0
+        self.count_mlp = (
+            nn.Sequential(nn.Linear(d, d), nn.GELU(), nn.Dropout(config.head_dropout))
+            if config.count_branch
+            else None
+        )
         self.classifier = nn.Linear(state_size + config.n_head_features, config.n_targets)
         self.image_encoder = ImageEncoder(d, config.dropout) if config.image_token_id >= 0 else None
         mask = torch.zeros(config.vocab_size, dtype=torch.bool)
@@ -148,7 +162,8 @@ class EHRTransformer(nn.Module):
         return [p for m in self.body_modules() for p in m.parameters()]
 
     def head_parameters(self) -> list[nn.Parameter]:
-        return list(self.classifier.parameters())
+        branch = list(self.count_mlp.parameters()) if self.count_mlp is not None else []
+        return list(self.classifier.parameters()) + branch
 
     def hidden(
         self, tokens: torch.Tensor, ages: torch.Tensor, images: torch.Tensor | None = None
@@ -183,6 +198,8 @@ class EHRTransformer(nn.Module):
         readout: torch.Tensor,
         head_features: torch.Tensor,
         event_mask: torch.Tensor | None = None,
+        count_ids: torch.Tensor | None = None,
+        count_weights: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Read the last clinical event (zero state when ``readout`` is -1); return 40 logits."""
         rows = torch.arange(states.shape[0], device=states.device)
@@ -194,6 +211,11 @@ class EHRTransformer(nn.Module):
             weights = event_mask.unsqueeze(2).to(states.dtype)
             mean = (states * weights).sum(dim=1) / weights.sum(dim=1).clamp(min=1.0)
             picked = torch.cat([picked, mean], dim=1)
+        if self.count_mlp is not None:
+            if count_ids is None or count_weights is None:
+                raise ValueError("the count branch needs the count inputs")
+            bag = self.token_embedding(count_ids) * count_weights.unsqueeze(2)
+            picked = torch.cat([picked, self.count_mlp(bag.sum(dim=1) * COUNT_SCALE)], dim=1)
         return self.classifier(self.head_dropout(torch.cat([picked, head_features], dim=1)))
 
     def forward(
@@ -204,6 +226,8 @@ class EHRTransformer(nn.Module):
         head_features: torch.Tensor,
         images: torch.Tensor | None = None,
         event_mask: torch.Tensor | None = None,
+        count_ids: torch.Tensor | None = None,
+        count_weights: torch.Tensor | None = None,
     ) -> torch.Tensor:
         states = self.hidden(tokens, ages, images)
-        return self.classify(states, readout, head_features, event_mask)
+        return self.classify(states, readout, head_features, event_mask, count_ids, count_weights)

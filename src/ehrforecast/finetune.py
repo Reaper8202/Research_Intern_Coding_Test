@@ -61,10 +61,24 @@ from ehrforecast.training import (
     sequence_config,
     set_rng_state,
     supervised_loss_sum,
+    target_loss_weights,
 )
 
 log = logging.getLogger("ehrforecast.finetune")
 METHODS = ("S", "H", "F")
+
+
+def batch_logits(model: EHRTransformer, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    return model(
+        batch["tokens"],
+        batch["ages"],
+        batch["readout"],
+        batch["head"],
+        batch.get("images"),
+        batch["event_mask"],
+        batch.get("count_ids"),
+        batch.get("count_weights"),
+    )
 
 
 @torch.no_grad()
@@ -78,14 +92,7 @@ def predict_samples(
     for i in range(0, len(order), batch_size):
         idx = order[i : i + batch_size]
         batch = collate([samples[k] for k in idx], device)
-        logits = model(
-            batch["tokens"],
-            batch["ages"],
-            batch["readout"],
-            batch["head"],
-            batch.get("images"),
-            batch["event_mask"],
-        )
+        logits = batch_logits(model, batch)
         probabilities = torch.sigmoid(logits.cpu().double()).numpy()
         if not np.isfinite(probabilities).all():
             raise FloatingPointError("non-finite predicted probabilities")
@@ -115,9 +122,12 @@ def load_parent_body(model: EHRTransformer, parent: Path, fold: FoldData) -> str
     """Copy body weights from our own pretraining checkpoint; the head stays newly initialized."""
     expected = {k: fold.provenance[k] for k in ("fold", "tokenizer_sha256", "histories_sha256")}
     state = load_checkpoint(parent, {**expected, "stage": "pretrain"})
-    body = {k: v for k, v in state["model"].items() if not k.startswith("classifier.")}
+    head = ("classifier.", "count_mlp.")
+    body = {k: v for k, v in state["model"].items() if not k.startswith(head)}
     missing, unexpected = model.load_state_dict(body, strict=False)
-    if unexpected or set(missing) != {"classifier.weight", "classifier.bias"}:
+    if unexpected or not {"classifier.weight", "classifier.bias"} <= set(missing):
+        raise ValueError("parent checkpoint does not match the model body")
+    if not all(k.startswith(head) for k in missing):
         raise ValueError("parent checkpoint does not match the model body")
     return file_hash(parent)
 
@@ -189,6 +199,9 @@ def run_finetuning(
     y_fit = labels.loc[fold.fit, codes].to_numpy("float32")
     unmasked_fit = 1.0 - prior.loc[fold.fit, codes].to_numpy("float32")
     extra_anchors = int(fc.get("extra_anchors", 0))
+    loss_weights = np.ones(y_fit.shape[1], dtype="float32")
+    if str(fc.get("target_weighting", "none")) == "sqrt_inverse":
+        loss_weights = target_loss_weights(y_fit, unmasked_fit)
 
     seed_everything(seed)
     model = build_model(config, fold.tokenizer, len(codes)).to(device)
@@ -259,7 +272,7 @@ def run_finetuning(
                 parts = []
                 for mb in micro_batches(batch, micro):
                     y = torch.from_numpy(epoch_y[mb]).to(device)
-                    mask = torch.from_numpy(epoch_unmasked[mb]).to(device)
+                    mask = torch.from_numpy(epoch_unmasked[mb] * loss_weights).to(device)
                     chosen = [epoch_samples[k] for k in mb]
 
                     def loss_fn(
@@ -267,14 +280,7 @@ def run_finetuning(
                     ) -> tuple[torch.Tensor, int]:
                         b = collate(c, device)
                         return supervised_loss_sum(
-                            model(
-                                b["tokens"],
-                                b["ages"],
-                                b["readout"],
-                                b["head"],
-                                b.get("images"),
-                                b["event_mask"],
-                            ),
+                            batch_logits(model, b),
                             y,
                             m,
                         )

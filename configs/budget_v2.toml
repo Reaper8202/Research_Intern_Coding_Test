@@ -71,3 +71,35 @@ id = "P2b-full-timeline-dropout03"
 config = "configs/experiments/v2_ftl.toml"
 reference = "configs/experiments/v2_do03.toml"
 folds = [0, 1, 2, 3, 4]
+
+# Added on 2 November 2026 at 19:29, before any score of these runs. Evidence: on clean inputs, 10
+# of 40 targets stay near chance for every model (best AUROC mean 0.558). The largest fixable gaps
+# to LightGBM are count-driven (colon polyp 0.769 against 0.861; myocardial infarction 0.802
+# against 0.890). X1 and A3 both gained on 4 of 5 folds but stayed below the 0.005 rule. Target
+# diagnoses are the hardest pretraining tokens (held-out loss about 2.6 against 1.4 overall).
+# Target number: none. A CV score of 0.80 is not a goal; the plan forbids promising a score.
+# Stopping rule: after these runs, one combination and the seeds of its result. No more trials.
+
+[[experiment]]
+id = "F1-count-branch"
+config = "configs/experiments/v2_count.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "F2-target-weights"
+config = "configs/experiments/v2_tw.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "P3a-weighted-parent"
+config = "configs/experiments/v2_ptw_pre.toml"
+reference = "configs/v2_base.toml"
+folds = [0, 1, 2, 3, 4]
+
+[[experiment]]
+id = "P3b-weighted-parent-dropout03"
+config = "configs/experiments/v2_ptw.toml"
+reference = "configs/experiments/v2_do03.toml"
+folds = [0, 1, 2, 3, 4]

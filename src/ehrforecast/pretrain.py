@@ -175,6 +175,11 @@ def run_pretraining(
 
     seed_everything(seed)
     model = build_model(config, fold.tokenizer, len(codes)).to(device)
+    token_weights = None
+    target_token_weight = float(pc.get("target_token_weight", 1.0))
+    if target_token_weight != 1.0:  # held-out stopping keeps the plain loss
+        token_weights = torch.ones(fold.tokenizer.size, device=device)
+        token_weights[target_start_ids.to(device)] = target_token_weight
     optimizer = torch.optim.AdamW(
         param_groups(list(model.parameters()), float(pc["lr"]), float(pc["weight_decay"])),
         betas=tuple(pc["betas"]),
@@ -234,7 +239,12 @@ def run_pretraining(
                     chosen = [samples[k] for k in mb]
                     count = sum(s.n_events for s in chosen)
                     parts.append(
-                        (lambda c=chosen: next_token_loss_sum(model, collate(c, device)), count)
+                        (
+                            lambda c=chosen: next_token_loss_sum(
+                                model, collate(c, device), token_weights
+                            ),
+                            count,
+                        )
                     )
                     padded_tokens += len(chosen) * max(len(s.tokens) for s in chosen)
                 loss_sum, count, norm = accumulate_step(

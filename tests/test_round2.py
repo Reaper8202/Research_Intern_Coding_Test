@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from ehrforecast.contracts import prediction_cohort
-from ehrforecast.finetune import with_landmarks
+from ehrforecast.finetune import batch_logits, load_parent_body, with_landmarks
 from ehrforecast.full_timeline import full_events
 from ehrforecast.model import EHRTransformer, ModelConfig
 from ehrforecast.sequences import (
@@ -21,7 +21,14 @@ from ehrforecast.sequences import (
     build_histories,
 )
 from ehrforecast.tokenizer import FoldTokenizer, drop_observations
-from ehrforecast.training import FoldData, collate, model_config
+from ehrforecast.training import (
+    CHECKPOINT_VERSION,
+    FoldData,
+    collate,
+    model_config,
+    next_token_loss_sum,
+    target_loss_weights,
+)
 from tests.transformer_fixtures import TARGETS, config, fold_data, permitted_events, raw_tables
 
 
@@ -272,3 +279,110 @@ def test_full_timeline_pretraining_never_reads_held_out_patients() -> None:
     assert any(longer)
     # A saved tokenizer fitted before the anchor stays the only vocabulary source.
     assert FoldTokenizer.fit(events, fit, min_patients=1).sha256 == tok.sha256
+
+
+def test_counts_cover_the_visible_history_and_nothing_later() -> None:
+    fold, i, anchor, _ = _landmark_case()
+    hist = fold.histories
+    full = SequenceConfig(48, 6, count_branch=True)
+    base = int(hist.token_offsets[i])
+    tokens = hist.tokens[base : base + hist.n_tokens(i)]
+    sample = hist.prediction_sample(i, full)
+    assert sample.count_ids is not None and sample.count_weights is not None
+    ids, counts = np.unique(tokens, return_counts=True)
+    assert np.array_equal(sample.count_ids, ids)
+    assert np.allclose(sample.count_weights, np.log1p(counts))
+    low, high = hist.landmark_range(i, anchor) or (0, 0)
+    cut = (low + high) // 2
+    days = hist.token_days[base : base + hist.n_tokens(i)]
+    visible = tokens[: int(np.searchsorted(days, cut, side="left"))]
+    early = hist.landmark_sample(i, cut, full)
+    assert early.count_ids is not None
+    assert set(early.count_ids.tolist()) == set(visible.tolist())
+    assert hist.prediction_sample(i, SequenceConfig(48, 6)).count_ids is None
+
+
+def test_a_short_context_still_counts_events_older_than_the_window() -> None:
+    fold = fold_data()
+    hist = fold.histories
+    short = SequenceConfig(16, 2, count_branch=True)
+    long_rows = [i for i in range(len(hist)) if hist.n_tokens(i) > 20]
+    assert long_rows
+    sample = hist.prediction_sample(long_rows[0], short)
+    assert sample.count_weights is not None
+    assert len(sample.tokens) <= 16
+    base = int(hist.token_offsets[long_rows[0]])
+    all_tokens = hist.tokens[base : base + hist.n_tokens(long_rows[0])]
+    assert np.exp(sample.count_weights).sum() - len(sample.count_weights) == pytest.approx(
+        len(all_tokens), abs=1e-3
+    )
+
+
+def test_the_count_branch_trains_from_a_parent_and_ignores_padding() -> None:
+    fold = fold_data()
+    seq = SequenceConfig(48, 6, count_branch=True)
+    torch.manual_seed(0)
+    make = lambda on: EHRTransformer(  # noqa: E731
+        ModelConfig(fold.tokenizer.size, 1, 16, 2, 2, 0.0, 0.0, 3, count_branch=on),
+        torch.from_numpy(fold.tokenizer.input_only_ids()),
+    ).eval()
+    model = make(True)
+    assert model.count_mlp is not None
+    assert all(any(p is q for q in model.head_parameters()) for p in model.count_mlp.parameters())
+    samples = sorted(
+        [fold.histories.prediction_sample(i, seq) for i in range(8)], key=lambda s: len(s.tokens)
+    )
+    alone = collate(samples[:1], torch.device("cpu"))
+    pair = collate([samples[0], samples[-1]], torch.device("cpu"))
+    assert torch.allclose(batch_logits(model, alone)[0], batch_logits(model, pair)[0], atol=1e-5)
+    plain = collate(samples[:1], torch.device("cpu"))
+    plain.pop("count_ids")
+    with pytest.raises(ValueError, match="count inputs"):
+        batch_logits(model, plain)
+
+
+def test_parent_loading_allows_only_head_keys_to_be_missing(tmp_path: Path) -> None:
+    fold = fold_data()
+    body = EHRTransformer(ModelConfig(fold.tokenizer.size, 1, 16, 2, 2, 0.0, 0.0, 3))
+    state = {
+        "version": CHECKPOINT_VERSION,
+        "complete": True,
+        "model": body.state_dict(),
+        "provenance": {**fold.provenance, "stage": "pretrain"},
+    }
+    path = tmp_path / "parent.pt"
+    torch.save(state, path)
+    child = EHRTransformer(
+        ModelConfig(fold.tokenizer.size, 1, 16, 2, 2, 0.0, 0.0, 3, count_branch=True)
+    )
+    load_parent_body(child, path, fold)
+    assert torch.equal(child.token_embedding.weight, body.token_embedding.weight)
+    smaller = EHRTransformer(ModelConfig(fold.tokenizer.size, 2, 16, 2, 2, 0.0, 0.0, 3))
+    with pytest.raises(ValueError, match="does not match"):
+        load_parent_body(smaller, path, fold)
+
+
+def test_target_weights_favour_rare_targets_with_mean_one() -> None:
+    labels = np.array([[1, 1, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]], dtype="float32")
+    unmasked = np.ones_like(labels)
+    weights = target_loss_weights(labels, unmasked)
+    assert weights[1] > weights[0]
+    assert weights[2] == weights.max()  # no positive: the largest weight in use
+    assert weights.mean() == pytest.approx(1.0)
+
+
+def test_token_weights_scale_only_the_named_targets() -> None:
+    fold = fold_data()
+    seq = SequenceConfig(48, 6)
+    samples = [fold.histories.prediction_sample(i, seq) for i in range(6)]
+    batch = collate(samples, torch.device("cpu"))
+    model = _model(fold, "last")
+    plain, count = next_token_loss_sum(model, batch)
+    ones = torch.ones(fold.tokenizer.size)
+    same, _ = next_token_loss_sum(model, batch, ones)
+    assert torch.allclose(plain, same)
+    target = batch["targets"][batch["targets"] >= 0][0]
+    weights = ones.clone()
+    weights[target] = 3.0
+    raised, count2 = next_token_loss_sum(model, batch, weights)
+    assert raised > plain and count == count2
