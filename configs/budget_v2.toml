@@ -103,3 +103,12 @@ id = "P3b-weighted-parent-dropout03"
 config = "configs/experiments/v2_ptw.toml"
 reference = "configs/experiments/v2_do03.toml"
 folds = [0, 1, 2, 3, 4]
+
+# Combination rule, added on 2 November 2026 at 22:05, before any score of F1, F2, P3a, or P3b.
+# Component test (against A1): mean AUROC gain above 0, higher AUROC on at least 4 of 5 folds, mean
+# mAP loss of at most 0.005. Tested: A3, X1, F1, F2, P3b. C1 joins every component that passes and
+# then needs the section 5.3 rule against A1 on its own five folds. Components were chosen on these
+# same folds, so a gain of C1 is optimistic; only official val and the hidden test can correct it.
+# P2b passes the rule (+0.0050, 5 of 5 folds, mAP +0.0075), but it reads post-anchor events of fit
+# patients, and the task says "Truncate the timeline at the anchor". It stays out of C1. A second
+# combination with the full-timeline parent runs only if Derek approves the reversal of D16.
