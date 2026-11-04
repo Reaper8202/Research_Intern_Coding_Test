@@ -3,7 +3,7 @@ title: "Forecasting first diagnoses from synthetic EHR timelines"
 subtitle: "Research intern coding test: technical report"
 author: "Derek Wu"
 date: "4 November 2026"
-geometry: margin=1.7cm
+geometry: margin=1.6cm
 fontsize: 10pt
 mainfont: "Helvetica Neue"
 colorlinks: true
@@ -116,4 +116,4 @@ Run `make setup`, link the dataset to `data/raw` (restricting `genomics/` to the
 
 ## References
 
-Acosta JN et al. Multimodal biomedical AI. *Nat Med* 28, 1773–1784 (2022). <https://doi.org/10.1038/s41591-022-01981-2> · Lee I et al. Representation Before Training: A Practical Benchmark for Generative Medical Event Model Tokenization. arXiv:2604.16775 (2026) · Li Y et al. BEHRT. *Sci Rep* 10, 7155 (2020) · McCann KA et al. Continuous Value Tokenization Improves Medical Event Foundation Models. medRxiv (2026) · Rasmy L et al. Med-BERT. *npj Digit Med* 4, 86 (2021) · Renc P et al. Zero shot health trajectory prediction using transformer (ETHOS). *npj Digit Med* (2024) · Soenksen LR et al. Integrated multimodal artificial intelligence framework for healthcare applications. *npj Digit Med* 5, 149 (2022). <https://doi.org/10.1038/s41746-022-00689-4> · Wornow M et al. Context Clues. ICLR 2025
+Acosta JN et al. Multimodal biomedical AI. *Nat Med* 28, 1773–1784 (2022). <https://doi.org/10.1038/s41591-022-01981-2> · Lee I et al. Representation Before Training. arXiv:2604.16775 (2026) · Li Y et al. BEHRT. *Sci Rep* 10, 7155 (2020) · McCann KA et al. Continuous Value Tokenization. medRxiv (2026) · Rasmy L et al. Med-BERT. *npj Digit Med* 4, 86 (2021) · Renc P et al. Zero shot health trajectory prediction using transformer (ETHOS). *npj Digit Med* (2024) · Soenksen LR et al. Integrated multimodal AI framework for healthcare applications. *npj Digit Med* 5, 149 (2022). <https://doi.org/10.1038/s41746-022-00689-4> · Wornow M et al. Context Clues. ICLR 2025
