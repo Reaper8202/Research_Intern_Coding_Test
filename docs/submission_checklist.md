@@ -7,7 +7,7 @@ marked **author** need a decision or an account that only the author has.
 
 | # | Item | Status on 4 November | What remains |
 |---|---|---|---|
-| 1 | Report author line (`docs/report.md`, `author:` in the front matter) | placeholder `[AUTHOR NAME]` | **author**: set the name the organisers expect |
+| 1 | Report author line (`docs/report.md`, `author:` in the front matter) | set to Derek Wu (4 November) | nothing |
 | 2 | AI tool names in `docs/report.md` section 3 (Codex and Claude model names) | the report names the tools; the separate `docs/ai_workflow.md` was removed on 4 November as not part of the submission | **author**: confirm the names are the ones the tools report |
 | 3 | Export the PDF after 1 and 2 (the author exports it; `cd docs && pandoc report.md -o report.pdf --pdf-engine=xelatex` also works) | `docs/report.md` is the author's text (commit 81ee8be); `docs/report.pdf` is still the earlier draft | **author**: export to `docs/report.pdf` |
 | 4 | Save the PDF as `<your_name>_results.pdf` (the name the brief asks for) | `docs/report.pdf` | **author**: copy under the final name; then `make submission-record` |
