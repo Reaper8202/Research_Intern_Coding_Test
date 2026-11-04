@@ -42,7 +42,7 @@ Training, tuning, and val-curve runs are logged in the wandb project linked from
 | every result with its interval: training CV, both val runs, per-target tables | [`docs/model_results.md`](docs/model_results.md) |
 | how leakage is prevented | the section below, then `src/ehrforecast/truncation.py` and `tests/test_history_boundary.py` |
 | the final audit: 74 criteria fixed before the examination, verdicts with evidence | [`docs/audit_criteria.md`](docs/audit_criteria.md), [`reports/audit/final_audit.md`](reports/audit/final_audit.md) |
-| how AI coding tools were used and what the review caught | [`docs/ai_workflow.md`](docs/ai_workflow.md) |
+| how AI coding tools were used | section 3 of the report |
 | the plans as written before the code | [`docs/planning/`](docs/planning/) |
 | what each committed result file and config is | [`reports/README.md`](reports/README.md), [`configs/README.md`](configs/README.md) |
 
