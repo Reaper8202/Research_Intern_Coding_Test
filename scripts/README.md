@@ -10,4 +10,5 @@ pipeline itself is the `make` targets over `src/ehrforecast/`.
 | `checks/race_check.py` | D15 | LightGBM with and without race and ethnicity (`reports/lightgbm_clean/race_check.json`) |
 | `checks/clock_scan.py` | D36 | how well observation counts predict the anchor era, with and without the three clock codes (`reports/dataset/clock_scan.txt`) |
 | `checks/modality_presence.py` | final audit | whether having a genotype or imaging file correlates with outcomes (`reports/dataset/modality_presence.json`) |
+| `checks/interpretability.py` | report section 4 | source, timing, and order ablations plus token attribution on training out-of-fold patients (`reports/interpretation/`) |
 | `submission_record.py` | final audit | hashes of the deliverables at a commit (`make submission-record`, `reports/final/submission_record.json`) |
