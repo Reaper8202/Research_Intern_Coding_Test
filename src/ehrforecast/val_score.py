@@ -3,9 +3,9 @@
 Two commands::
 
     python -m ehrforecast.val_score freeze --config configs/final.toml \
-        --dataset data/processed --models models --manifest models/final/manifest.json
+        --dataset data/processed --models models --manifest reports/final/manifest.json
     python -m ehrforecast.val_score score --config configs/final.toml \
-        --dataset data/processed --models models --manifest models/final/manifest.json \
+        --dataset data/processed --models models --manifest reports/final/manifest.json \
         --reports reports/val
 
 ``freeze`` records every artifact the bundle reads: the fold checkpoints and their saved epoch

@@ -124,7 +124,7 @@ PYTHONPATH=src python -m ehrforecast.predict --dataset data/processed --split te
 Step 5 (P4e). The frozen bundle scores official val once and writes the test predictions:
 
 ```bash
-make freeze                       # configs/final.toml -> models/final/manifest.json (every hash)
+make freeze                       # configs/final.toml -> reports/final/manifest.json (every hash)
 make val-score                    # one recorded val run -> reports/val/ (refuses a changed tree)
 make predict                      # test probabilities from the frozen members -> predictions.csv
 ```
