@@ -185,6 +185,7 @@ package:
 		--models $(MODELS_DIR) --dataset $(PROCESSED_DIR) --out $(MODELS_DIR)/hf \
 		--configs configs/final.toml configs/v2_base.toml $(C1_CONFIGS) \
 		--repo Reaper8202/ehr-forecast --val-summary $(REPORTS_DIR)/val/val_summary.json
+	cp docs/model_card.md $(MODELS_DIR)/hf/README.md
 	$(PYTHON) -m ehrforecast.hf_package verify --package $(MODELS_DIR)/hf \
 		--dataset $(PROCESSED_DIR) --predictions predictions.csv --device $(DEVICE) \
 		--out $(REPORTS_DIR)/final/package_verify_cpu.json

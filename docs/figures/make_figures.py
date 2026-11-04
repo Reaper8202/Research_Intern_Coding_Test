@@ -57,3 +57,20 @@ ax.legend(frameon=False, loc="lower right", fontsize=8)
 fig.tight_layout()
 fig.savefig(out / "val_per_target.png")
 print("wrote", out / "val_curves.png", out / "val_per_target.png")
+
+# Figure 3: reliability of the blend before and after Platt scaling (training CV, nested folds).
+rel = pd.read_csv(root / "reports/calibration/stack/reliability.csv")
+fig, ax = plt.subplots(figsize=(4.6, 4.2))
+ax.plot([0, 0.6], [0, 0.6], color=MUTED, lw=0.8, ls=":")
+for name, color, label in (("raw", BLUE, "blend, raw"), ("calibrated", ORANGE, "blend, Platt-scaled")):
+    d = rel[rel.model == name]
+    ax.plot(d.mean_probability, d.observed_rate, "-o", color=color, lw=1.5, ms=5, mec="white", mew=0.8, label=label)
+ax.set_xlabel("mean predicted probability (equal-mass bins)")
+ax.set_ylabel("observed first-diagnosis rate")
+ax.set_xlim(0, 0.6)
+ax.set_ylim(0, 0.6)
+ax.grid(color=GRID, lw=0.6)
+ax.legend(frameon=False, loc="upper left", fontsize=8)
+fig.tight_layout()
+fig.savefig(out / "reliability.png")
+print("wrote", out / "reliability.png")

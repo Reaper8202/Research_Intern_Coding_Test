@@ -154,6 +154,21 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
 * `ehrforecast.hf_package` builds the public package in the `models/transformer` layout, so the
   README's prediction command works from the download; `verify` reproduces `predictions.csv`.
 
+## Status on 3 November 2026, evening (round 3)
+
+* Derek asked for the strongest leak-free submission and a check of every decision. An
+  independent read-only audit of every data boundary found no leak (D1 to D37 hold); it flagged
+  that having a genotype file or a scan is itself correlated with outcomes (a dataset artifact,
+  disclosed in the report), and the residual era signal already recorded in D36.
+* Round 3 was pre-registered in `configs/budget_v3.toml` (commit e93c4d7) before any of its scores.
+  Rule S adopted the mean-of-logits blend of the C1 three-seed ensemble with LightGBM counts and
+  counts + values (nested five-fold CV: +0.014 AUROC over the ensemble, +0.011 over LightGBM
+  counts, intervals above zero). Rule C adopted per-target Platt scaling. Rule A2 (LightGBM
+  probabilities as head inputs) was skipped by its condition. D38 records the numbers.
+* Rule A1, the 4 x 192 architecture screen on fold 0, is recorded in D38 when it completes.
+* Next: refreeze, the replacement val bundle (attempt 2, disclosed; attempt 1 stays under
+  `reports/val/attempts/`), `make predict`, `make submission`, `make package`, report.
+
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the
 earlier time was memory pressure, not computation. One fold now needs about 20 minutes.
