@@ -1,6 +1,6 @@
 {
-  "recorded_at": "2026-11-03T23:50:47-0500",
-  "commit": "e59aea8924b15a477a7b4c8672a5b2d1b94909e6",
+  "recorded_at": "2026-11-04T10:18:53-0500",
+  "commit": "f0bc8df47e00058da76b6c0b105ed96f3ea962ba",
   "tracked_changes": "",
   "files": {
     "predictions.csv": {
@@ -8,8 +8,8 @@
       "bytes": 287482
     },
     "docs/report.pdf": {
-      "sha256": "ca37421b9059ea79176636b5009aff7989a5ac23e540b5f7a3131b09259f5ef9",
-      "bytes": 473853
+      "sha256": "275cd7c3405bfffcaa127825d07e25124e47be8dd572b4058f1a2b59005ae3f0",
+      "bytes": 474333
     },
     "reports/final/manifest.json": {
       "sha256": "f017b91404558afd5cfee371cb531636fda0cf4a7e15e810d20fe39b45f251de",
