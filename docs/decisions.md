@@ -117,7 +117,7 @@ rank-based versions. Unit tests check that they equal the sklearn values, ties i
 
 ## D31. Interval stops recorded before their own start
 
-D9–D30 are reserved for the planned decisions in `docs/model_plan.md`. This implementation
+D9–D30 are reserved for the planned decisions in `docs/planning/model_plan.md`. This implementation
 decision therefore uses the next free number. Derek approved it on 31 October 2026.
 
 **Decision.** When an interval row has a `STOP` earlier than its own `START`, keep the recorded

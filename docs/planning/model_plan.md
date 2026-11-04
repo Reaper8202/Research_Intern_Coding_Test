@@ -1,5 +1,8 @@
 # Model plan: steps 3 and 4
 
+*Planning document, kept as it was written (revision 2.5, 3 November 2026; the revision log is section 18). Where it differs from [the decision log](../decisions.md) or [the results](../model_results.md), those two record what was done.*
+
+
 | Item | Value |
 |---|---|
 | Version | 2.4, 1 November 2026 |
@@ -1227,9 +1230,9 @@ result with its date, reason, affected runs, and whether results were already kn
 
 ## 19. Sources
 
-Assessment rules: [supplied README](../../research_intern_coding_test/ReadMe.md).
-Existing data decisions: [D1–D8](decisions.md).
-Existing reference results: [baseline results](baseline_results.md).
+Assessment rules: the organisers' brief (`ReadMe.md` in the task folder; not committed).
+Existing data decisions: [D1–D8](../decisions.md).
+Existing reference results: [baseline results](../baseline_results.md).
 
 * Shmatko A, et al. Learning the natural history of human disease with generative transformers.
   [Nature (2025)](https://doi.org/10.1038/s41586-025-09529-3).

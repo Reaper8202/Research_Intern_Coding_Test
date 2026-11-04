@@ -1,5 +1,8 @@
 # Plan
 
+*Planning document, kept as it was written (last status entry 3 November 2026). Where it differs from [the decision log](../decisions.md) or [the results](../model_results.md), those two record what was done.*
+
+
 Goal: predict each test patient's probability of a first diagnosis for each of the 40 target
 conditions within five years after the anchor. The final product must be a transformer.
 Logistic regression and LightGBM provide comparisons only.
@@ -8,7 +11,7 @@ The main objective is to demonstrate correct data handling, model training, eval
 reproducibility. Clinical usefulness is not an objective. Complete a small end-to-end pipeline
 before model experiments. Strong results remain an aim; model size and novelty are not requirements.
 
-Follow the [assessment README](../../research_intern_coding_test/ReadMe.md). Keep the supplied
+Follow the organisers' brief (`ReadMe.md` in the task folder; not committed). Keep the supplied
 splits. Use only supplied training data and weights learned in this project. Use no external
 datasets, pretrained weights, external tokenizers, or published clinical risk coefficients.
 The coefficient restriction is a conservative project choice; the README does not discuss
@@ -60,7 +63,7 @@ This revision changes the plan. It does not complete an implementation phase.
 ## Step 3 to 5 design
 
 The full plan defines decisions D9–D30, phases, experiments, tests, and risks. Existing decisions
-D1–D8 remain in [decisions.md](decisions.md). Planned decisions move there when implemented.
+D1–D8 remain in [decisions.md](../decisions.md). Planned decisions move there when implemented.
 
 Compare these methods using the same representation and training folds:
 
