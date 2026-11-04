@@ -442,3 +442,61 @@ infections, as in CV.
 **Val curves.** Every saved epoch checkpoint of the 15 members was scored on val after training
 and logged to wandb (group `val-bundle-168b78f5b5d8`); `reports/val/val_curves.csv`. The best
 epoch was chosen on each member's held-out training fold and was not changed.
+
+## D38. Round 3: the submission is a fixed blend of the transformer ensemble and LightGBM
+
+**Decision.** The submitted probabilities are the mean of logits of three base models, then
+per-target Platt scaling: the D36 transformer ensemble (15 fold models), LightGBM on code counts,
+and LightGBM on counts plus latest values, the last two fitted on all training patients with the
+settings training CV selected in E11. The rules that chose this were written in
+`configs/budget_v3.toml` (commit e93c4d7) before any of the numbers below existed. Derek asked on
+3 November for the strongest leak-free submission; the task brief recommends a sequence model
+but says the modeling approach is the candidate's choice. The transformer remains the part of
+the system this project built and studied; the blend is reported as a blend.
+
+**Rule S, stacking (`reports/stacking/clean/`, nested five-fold, official val not read).** Base
+models are out-of-fold predictions; the stacker applied to a fold is fitted (where it has
+parameters) on the other four folds.
+
+| Model | Pooled OOF AUROC | Pooled OOF mAP | Mean fold AUROC | Mean fold mAP |
+|---|---|---|---|---|
+| Transformer ensemble (T) | 0.7607 | 0.1809 | 0.7653 | 0.2036 |
+| LightGBM counts (L1) | 0.7637 | 0.1883 | | |
+| LightGBM counts + values (L2) | 0.7610 | 0.2015 | | |
+| Oracle: better of T and L1/L2 per target | 0.7783 | | | |
+| Stack, mean of probabilities | 0.7735 | 0.2132 | 0.7788 | 0.2365 |
+| **Stack, mean of logits (adopted)** | **0.7744** | **0.2124** | **0.7798** | **0.2364** |
+| Stack, per-target logistic regression on logits | 0.7688 | 0.2160 | 0.7808 | 0.2444 |
+
+Paired patient BCa 95%, pooled out of fold, mean of logits minus: T, AUROC +0.0137
+[+0.0093, +0.0193] and mAP +0.0315 [+0.0238, +0.0382]; L1, AUROC +0.0108 [+0.0067, +0.0143] and
+mAP +0.0241 [+0.0192, +0.0311]; L2, AUROC +0.0134 [+0.0090, +0.0185]. The rule's three
+conditions hold (interval above zero against T, mAP gain at least zero, AUROC at least L1's), so
+the stack replaces T. The logistic stacker exceeds the mean of logits by 0.0010 mean fold AUROC,
+below the 0.003 margin, so the parameter-free blend is kept and rule A2 (LightGBM probabilities
+as transformer head inputs) is skipped: there is no evidence that learned target-specific
+weighting adds anything over a fixed blend. The logistic stacker's pooled AUROC is lower than its
+mean fold AUROC because each fold's fitted weights put probabilities on a different scale.
+
+With the simulator clock codes kept (D35 model and the E11 LightGBM with those codes,
+`reports/stacking/with_clock_codes/`), the same blend reaches 0.7790 pooled and 0.7842 mean fold
+AUROC: about 0.005 more. The codes stay out (D36).
+
+**Rule C, calibration (`reports/calibration/stack/`).** Per-target Platt scaling fitted on the
+blend's out-of-fold probabilities, nested by fold. Macro Brier 0.0366 to 0.0365, macro expected
+calibration error 0.0128 to 0.0103, lower Brier on 4 of 5 folds: adopted. A first version of the
+fit let the slope go negative on five near-chance targets (pharyngitis, sinusitis, strep throat,
+concussion, wrist sprain), which would have reversed their ranking; the fit now keeps the model's
+own order (slope 1, intercept 0) whenever the fitted slope is not positive. Per-fold AUROC is
+unchanged by the scaling on every fold. Pooled out-of-fold AUROC moves (0.7744 to 0.7671) only
+because the five folds' weights put probabilities on different scales; the single set of weights
+fitted on all training out-of-fold predictions (`platt_weights.json`) is what val and test use.
+
+**Rule A1, architecture (4 layers, width 192).** Result recorded below when the fold-0 screen
+completes.
+
+**What the stack is not.** The 0.80 that was hoped for is out of reach on this data: nine
+targets are near chance for every model, the oracle choice between T and LightGBM per target
+reaches only 0.778 in CV, and the blend is 0.774 pooled. Every number in this entry comes from
+the same five folds as the 23 earlier configurations, so it carries selection optimism; the
+replacement val bundle (attempt 2) and the hidden test are the checks.

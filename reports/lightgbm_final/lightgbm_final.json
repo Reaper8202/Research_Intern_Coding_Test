@@ -1,0 +1,32 @@
+{
+  "excluded_observations": [
+    "DALY",
+    "QALY",
+    "QOLS"
+  ],
+  "feature_sets": {
+    "counts": {
+      "boosters": 40,
+      "constants": 0,
+      "min_child_samples": 20,
+      "model_dir": "models/lightgbm_final/counts",
+      "n_estimators": 100,
+      "n_features": 1064,
+      "num_leaves": 4
+    },
+    "counts_values": {
+      "boosters": 40,
+      "constants": 0,
+      "min_child_samples": 20,
+      "model_dir": "models/lightgbm_final/counts_values",
+      "n_estimators": 100,
+      "n_features": 1352,
+      "num_leaves": 4
+    }
+  },
+  "n_test": 358,
+  "n_train": 2791,
+  "n_val": 365,
+  "scope": "fitted on all training patients; val and test used as inputs only",
+  "settings_sha256": "a3e5626a39068939b855e368d5270217a59f198983e0513a2f60389a81563978"
+}

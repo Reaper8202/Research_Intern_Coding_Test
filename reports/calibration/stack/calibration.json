@@ -1,0 +1,79 @@
+{
+  "adopt_rule": "calibrated Brier lower on at least 4 of 5 folds",
+  "adopted": true,
+  "fold_table": [
+    {
+      "auroc_calibrated": 0.779079732225006,
+      "auroc_raw": 0.779079732225006,
+      "brier_calibrated": 0.037068263914038904,
+      "brier_raw": 0.037229538936604835,
+      "fold": 0
+    },
+    {
+      "auroc_calibrated": 0.7818394489350255,
+      "auroc_raw": 0.7818394489350255,
+      "brier_calibrated": 0.03638731316862843,
+      "brier_raw": 0.036496146644975,
+      "fold": 1
+    },
+    {
+      "auroc_calibrated": 0.7793816584078739,
+      "auroc_raw": 0.7793816584078739,
+      "brier_calibrated": 0.036476228965936996,
+      "brier_raw": 0.03638759793500076,
+      "fold": 2
+    },
+    {
+      "auroc_calibrated": 0.7768872272591137,
+      "auroc_raw": 0.7768872272591137,
+      "brier_calibrated": 0.03624565557188066,
+      "brier_raw": 0.03634902072760229,
+      "fold": 3
+    },
+    {
+      "auroc_calibrated": 0.7820618457378885,
+      "auroc_raw": 0.7820618457378885,
+      "brier_calibrated": 0.036275284227758456,
+      "brier_raw": 0.03643250010795958,
+      "fold": 4
+    }
+  ],
+  "folds_with_lower_brier": 4,
+  "n_bins": 10,
+  "pooled": {
+    "calibrated": {
+      "mAP": 0.2056422433127994,
+      "macro_auroc": 0.7671019293136909,
+      "macro_brier": 0.03649075616167462,
+      "macro_ece": 0.010250100505121004,
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_patients": 2791,
+      "n_targets": 40,
+      "n_targets_auroc": 40,
+      "n_targets_average_precision": 40,
+      "n_targets_brier": 40,
+      "pooled_ece_all_cells": 0.0018520920639690326,
+      "prior_mask_applied": true,
+      "scope": "all_patients"
+    },
+    "raw": {
+      "mAP": 0.21243828630755468,
+      "macro_auroc": 0.7744325885742018,
+      "macro_brier": 0.036579193968983195,
+      "macro_ece": 0.012794471770886943,
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_patients": 2791,
+      "n_targets": 40,
+      "n_targets_auroc": 40,
+      "n_targets_average_precision": 40,
+      "n_targets_brier": 40,
+      "pooled_ece_all_cells": 0.005794942634929321,
+      "prior_mask_applied": true,
+      "scope": "all_patients"
+    }
+  },
+  "scope": "training-split nested cross-validation; official val not read",
+  "source": [
+    "reports/stacking/clean/oof_stack_logit_mean.parquet"
+  ]
+}

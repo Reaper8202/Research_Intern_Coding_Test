@@ -37,7 +37,6 @@ FINAL: dict[str, Any] = {
         "logreg_codes": "reports/ref_codes.csv",
         "incidence_at_risk": "reports/ref_at_risk.csv",
         "lightgbm_settings": "reports/lgbm.json",
-        "lightgbm_feature_sets": ["counts"],
     },
 }
 
@@ -119,11 +118,13 @@ def test_score_bundle_matches_the_prediction_command_and_reports_comparisons(
     other = pd.DataFrame(
         rng.random((len(labels), len(TARGETS))), index=labels.index, columns=TARGETS
     )
-    summary, final, per_target = score_bundle(
+    summary, final, per_target, transformer = score_bundle(
         inputs, labels, [fm], {"other": other}, None, clock_year=2015, n_boot=20, seed=0, device=CPU
     )
     expected = predict_inputs([fm], inputs, CPU)
     pd.testing.assert_frame_equal(final, expected)
+    pd.testing.assert_frame_equal(transformer, expected)
+    assert summary["submission"].startswith("transformer ensemble")
     assert summary["n_patients"] == len(labels) and summary["ensemble_members"] == 1
     assert summary["final"]["masked"]["prior_mask_applied"]
     assert "final_minus_other" in summary["paired_bca"]
@@ -215,7 +216,6 @@ def _run(root: Path, final: Path, dataset: Path, models: Path, manifest: Path, o
         out,
         device=CPU,
         wandb_mode="disabled",
-        lightgbm=False,
     )
 
 

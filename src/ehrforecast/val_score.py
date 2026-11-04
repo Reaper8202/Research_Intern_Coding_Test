@@ -24,7 +24,6 @@ import argparse
 import json
 import logging
 import subprocess
-import sys
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -51,6 +50,7 @@ from ehrforecast.modalities import Modalities
 from ehrforecast.predict import FoldModel, load_fold_model, predict_inputs
 from ehrforecast.provenance import code_hashes, file_hash, object_hash, write_json
 from ehrforecast.sequences import Sample, build_histories
+from ehrforecast.submission import build as build_submission
 from ehrforecast.training import (
     config_modalities,
     fold_dir,
@@ -182,12 +182,7 @@ def build_manifest(
                 "epoch_checkpoints": [str(p) for p in epochs],
             }
         )
-    comparisons = final["comparisons"]
-    comparison_hashes = {
-        str(comparisons[key]): file_hash(root / str(comparisons[key]))
-        for key in comparisons
-        if key.endswith(("_codes", "_at_risk", "_settings"))
-    }
+    comparison_hashes = frozen_inputs(root, final)
     return {
         "version": MANIFEST_VERSION,
         "frozen_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -211,6 +206,27 @@ def build_manifest(
         "comparison_hashes": comparison_hashes,
         "evaluation": final["evaluation"],
     }
+
+
+def frozen_inputs(root: Path, final: dict[str, Any]) -> dict[str, str]:
+    """Hashes of every file the bundle reads besides the members: step-2 val predictions, the
+    LightGBM settings, the final LightGBM boosters and prediction files, and the stack inputs."""
+    comparisons = final["comparisons"]
+    paths: list[Path] = [
+        Path(str(comparisons[key]))
+        for key in comparisons
+        if key.endswith(("_codes", "_at_risk", "_settings"))
+    ]
+    for key in ("lightgbm_dir", "lightgbm_models"):
+        if key in comparisons:
+            directory = root / str(comparisons[key])
+            if not directory.is_dir():
+                raise ValueError(f"{directory} is missing; run make lightgbm-final first")
+            paths += sorted(q.relative_to(root) for q in directory.rglob("*") if q.is_file())
+    stack = final.get("stack")
+    if stack:
+        paths += [Path(str(stack[k])) for k in ("platt_weights", "oof_source") if stack.get(k)]
+    return {str(q): file_hash(root / q) for q in paths}
 
 
 def verify_manifest(
@@ -341,12 +357,33 @@ def score_bundle(
     seed: int,
     device: torch.device,
     batch_size: int = 64,
-) -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
-    """Final probabilities, metrics, predeclared paired comparisons, and descriptive subgroups."""
+    stack: dict[str, Any] | None = None,
+    root: Path | None = None,
+) -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Final probabilities, metrics, predeclared paired comparisons, and descriptive subgroups.
+
+    Without ``stack`` the final model is the transformer ensemble. With it, the final model is
+    the configured blend of the ensemble and the named comparison models (``submission.build``),
+    and the ensemble itself becomes one more comparison. Returns the summary, the final
+    probabilities, the per-target table, and the transformer ensemble probabilities.
+    """
     codes, prior = inputs.codes, inputs.prior
     if np.logical_and(labels.to_numpy(), prior.to_numpy()).any():
         raise ValueError("positive val labels overlap prior conditions")
-    final = predict_inputs(fold_models, inputs, device, batch_size, modalities)
+    transformer = predict_inputs(fold_models, inputs, device, batch_size, modalities)
+    if stack is None:
+        final = transformer
+        submission = f"transformer ensemble of {len(fold_models)} fold models"
+    else:
+        if root is None:
+            raise ValueError("a stack needs the project root for its weight files")
+        final = build_submission(
+            stack, {"transformer": transformer, **comparisons}, prior, codes, root
+        )
+        comparisons = {"transformer": transformer, **comparisons}
+        submission = f"{stack['stacker']} of {list(stack['bases'])}" + (
+            " with Platt scaling" if stack.get("platt_weights") else ""
+        )
     models = {"final": final, **comparisons}
     masked = evaluate_predictions(labels, final, codes, prior=prior)
     at_risk = evaluate_predictions(labels, final, codes, prior=prior, at_risk=True)
@@ -355,6 +392,7 @@ def score_bundle(
         "n_patients": len(labels),
         "n_positive_labels": int(labels.to_numpy().sum()),
         "ensemble_members": len(fold_models),
+        "submission": submission,
         "final": {"masked": masked.summary, "at_risk": at_risk.summary},
         "final_bca": bootstrap_comparison(
             labels, final, codes, prior=prior, n_boot=n_boot, seed=seed
@@ -397,7 +435,7 @@ def score_bundle(
                     labels.loc[rows], probabilities.loc[rows], codes, prior=prior.loc[rows]
                 ).summary
         summary["subgroups"][group] = entry
-    return summary, final, pd.concat(per_target)
+    return summary, final, pd.concat(per_target), transformer
 
 
 # ---------------------------------------------------------------------- command
@@ -435,7 +473,6 @@ def run(
     wandb_mode: str = "online",
     wandb_entity: str | None = None,
     replacement_reason: str | None = None,
-    lightgbm: bool = True,
     check_tree: bool = True,
 ) -> dict[str, Any]:
     final = load_final(config_path)
@@ -484,27 +521,10 @@ def run(
             "logreg_codes": root / str(comparisons_cfg["logreg_codes"]),
             "incidence_at_risk": root / str(comparisons_cfg["incidence_at_risk"]),
         }
-        if lightgbm:
-            subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "ehrforecast.lightgbm_val",
-                    "--dataset",
-                    str(dataset_dir),
-                    "--settings",
-                    str(root / str(comparisons_cfg["lightgbm_settings"])),
-                    "--feature-sets",
-                    *[str(s) for s in comparisons_cfg["lightgbm_feature_sets"]],
-                    "--out",
-                    str(reports_dir),
-                ],
-                check=True,
+        for name in comparisons_cfg.get("lightgbm_feature_sets", []):
+            comparison_files[f"lightgbm_{name}"] = (
+                root / str(comparisons_cfg["lightgbm_dir"]) / f"val_predictions_lightgbm_{name}.csv"
             )
-            for name in comparisons_cfg["lightgbm_feature_sets"]:
-                comparison_files[f"lightgbm_{name}"] = (
-                    reports_dir / f"val_predictions_lightgbm_{name}.csv"
-                )
         splits = load_splits(dataset_dir)
         patients = pd.Index(splits.index[splits.eq("val")], name="patient_id")
         inputs = load_prediction_inputs(dataset_dir, patients)
@@ -522,7 +542,7 @@ def run(
         if len({modality_settings(fm.config) for fm in fold_models}) > 1:
             raise ValueError("the fold models use different modalities")
         modalities = config_modalities(dataset_dir, fold_models[0].config)
-        summary, final_probabilities, per_target = score_bundle(
+        summary, final_probabilities, per_target, transformer = score_bundle(
             inputs,
             labels,
             fold_models,
@@ -532,9 +552,14 @@ def run(
             n_boot=int(evaluation["n_boot"]),
             seed=int(evaluation["bootstrap_seed"]),
             device=device,
+            stack=final.get("stack"),
+            root=root,
         )
         final_probabilities.to_csv(
             reports_dir / "val_predictions_final.csv", index_label="patient_id"
+        )
+        transformer.to_csv(
+            reports_dir / "val_predictions_transformer.csv", index_label="patient_id"
         )
         per_target.to_csv(reports_dir / "val_per_target.csv")
         summary["bundle_id"] = bundle_id
@@ -567,7 +592,11 @@ def run(
                 group=f"val-bundle-{bundle_id}",
                 job_type="val-bundle",
                 dir=str(reports_dir),
-                config={**record, "ensemble": manifest["ensemble"]},
+                config={
+                    **record,
+                    "ensemble": manifest["ensemble"],
+                    "submission": summary["submission"],
+                },
                 mode=wandb_mode,  # type: ignore[arg-type]
             )
             final_run.log(
@@ -622,7 +651,6 @@ def main(argv: list[str] | None = None) -> None:
     score.add_argument("--wandb", choices=["online", "offline", "disabled"], default="online")
     score.add_argument("--wandb-entity", default=None)
     score.add_argument("--replacement", default=None, help="reason for a replacement bundle")
-    score.add_argument("--no-lightgbm", action="store_true", help="skip the LightGBM refit")
     args = parser.parse_args(argv)
     setup_logging(args.log_file)
     root = args.root.resolve()
@@ -649,7 +677,6 @@ def main(argv: list[str] | None = None) -> None:
         wandb_mode=args.wandb,
         wandb_entity=args.wandb_entity,
         replacement_reason=args.replacement,
-        lightgbm=not args.no_lightgbm,
     )
 
 

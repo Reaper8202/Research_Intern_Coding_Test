@@ -1,10 +1,18 @@
-# P4e frozen bundle (model plan section 11; decision D36).
-# The submitted model is the mean of fifteen fold models: configuration small-v2-c1 and its two
+# P4e frozen bundle (model plan section 11; decisions D36, D37, and the round-3 rules in
+# configs/budget_v3.toml). Revised on 3 November 2026 for the round-3 submission.
+#
+# The transformer part is the mean of fifteen fold models: configuration small-v2-c1 and its two
 # seed repeats, five folds each, method F, each fold's best epoch on its held-out training fold.
-# `make freeze` records every artifact hash in models/final/manifest.json. `make val-score` reads
-# official val once; it refuses a changed tree, a changed artifact, or a completed bundle.
+# The submission blends that ensemble with the two final LightGBM models (fitted on all training
+# patients with their CV-selected settings) by the mean of logits, then applies per-target Platt
+# scaling fitted on training out-of-fold predictions. Rules S and C of budget_v3.toml chose both.
+#
+# `make lightgbm-final` writes the LightGBM boosters and val/test probabilities. `make freeze`
+# records every artifact hash in reports/final/manifest.json. `make val-score` reads official val
+# once per bundle; a second bundle needs --replacement with a reason, and the first attempt is
+# kept under reports/val/attempts/.
 name = "final"
-decision = "D36"
+decision = "D36 ensemble; round-3 stack (budget_v3 rules S and C)"
 method = "F"
 checkpoint = "best.pt"
 folds = [0, 1, 2, 3, 4]
@@ -20,11 +28,19 @@ bootstrap_seed = 0
 clock_year = 2015             # D36 anchor-era subgroup: anchors before this year
 curves = true                 # score every saved epoch checkpoint of every member on val
 
+# The submitted probabilities (ehrforecast.submission). Bases are blended in this order.
+[stack]
+bases = ["transformer", "lightgbm_counts", "lightgbm_counts_values"]
+stacker = "logit_mean"
+platt_weights = "reports/calibration/stack/platt_weights.json"
+oof_source = "reports/stacking/clean/oof_stack_logit_mean.parquet"   # what the Platt fit read
+
 # Section 5.5 predeclared comparisons. Step-2 files were written by `make baseline` from
-# train-only fits. LightGBM is refitted on all training patients with the settings that
-# training CV selected (reports/lightgbm_clean/cv_summary.json), in a separate process.
+# train-only fits. The LightGBM files come from `make lightgbm-final` (frozen with the members).
 [comparisons]
 logreg_codes = "reports/baseline/val_predictions_logreg_codes.csv"
 incidence_at_risk = "reports/baseline/val_predictions_incidence_age_sex_at_risk.csv"
 lightgbm_settings = "reports/lightgbm_clean/cv_summary.json"
 lightgbm_feature_sets = ["counts", "counts_values"]
+lightgbm_dir = "reports/lightgbm_final"
+lightgbm_models = "models/lightgbm_final"

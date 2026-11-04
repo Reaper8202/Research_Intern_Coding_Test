@@ -121,19 +121,31 @@ PYTHONPATH=src python -m ehrforecast.predict --dataset data/processed --split te
     --run-dir models/transformer/small-v2-c1{,-seed2,-seed3}/fold{0,1,2,3,4}/F --out predictions.csv
 ```
 
-Step 5 (P4e). The frozen bundle scores official val once and writes the test predictions:
+Round 3 (`configs/budget_v3.toml`, D38): the submission blends the transformer ensemble with the
+two LightGBM models by the mean of logits, then applies per-target Platt scaling. All of it is
+chosen and fitted on training CV:
+
+```bash
+make stacking                     # nested-fold stack of the C1 ensemble and LightGBM OOF -> reports/stacking/clean
+make calibration                  # per-target Platt scaling of the blend -> reports/calibration/stack
+make lightgbm-final               # LightGBM on all training patients: boosters, val and test probabilities
+```
+
+Step 5 (P4e). The frozen bundle scores official val once per attempt and writes the submission:
 
 ```bash
 make freeze                       # configs/final.toml -> reports/final/manifest.json (every hash)
 make val-score                    # one recorded val run -> reports/val/ (refuses a changed tree)
-make predict                      # test probabilities from the frozen members -> predictions.csv
+make predict                      # transformer test probabilities -> reports/final/test_predictions_transformer.csv
+make submission                   # blend + scaling over the transformer and LightGBM files -> predictions.csv
+make package                      # public package in models/hf, then the clean-reload check
 ```
 
-`make val-score` refits the LightGBM comparison baselines on all training patients in a separate
-process (`ehrforecast.lightgbm_val`), scores the ensemble and every saved epoch checkpoint on val,
-and logs the val curves to wandb. A second run needs `--replacement` with a documented reason;
-the first attempt is kept under `reports/val/attempts/`. The ensemble prediction above runs 15
-models and takes about 6 minutes. `scripts/checks/` holds the one-off
+`make val-score` scores the submission, the transformer ensemble, the step-2 baselines, and the
+frozen LightGBM files on val, then every saved epoch checkpoint of the members as val curves logged
+to wandb. A second run needs `--replacement` with a documented reason; each earlier attempt is
+kept under `reports/val/attempts/`. The transformer prediction runs 15 models and takes about
+6 minutes on CPU. `scripts/checks/` holds the one-off
 data checks behind D15, D31, and D36.
 
 Genotypes enter as `[DNA] dna:<site>:<variant alleles>` tokens. A scan enters as one `[IMG]`
@@ -228,7 +240,10 @@ scores belong to the organisers. Per-target and subgroup results: `docs/model_re
 | `predict.py` | label-free prediction from saved fold models |
 | `smoke.py` | G2 end-to-end execution check |
 | `cv_summary.py` | five-fold results, method selection, config comparison |
-| `lightgbm_val.py` | LightGBM comparison baselines refitted on train and scored on val (P4e) |
-| `val_score.py` | P4e: artifact freeze, hash verification, the one official val run, val curves |
+| `stacking.py` | round 3: nested-fold stacking of the transformer ensemble with LightGBM (CV only) |
+| `calibration.py` | round 3: per-target Platt scaling, reliability tables, nested-fold check |
+| `lightgbm_final.py` | final LightGBM models on all training patients; boosters, feature spec, val/test files |
+| `submission.py` | the submitted probabilities: blend of the bases, then Platt scaling |
+| `val_score.py` | P4e: artifact freeze, hash verification, the official val run, val curves |
 | `hf_package.py` | build and verify the public model package (Hugging Face Hub) |
 | `wandb_sync.py` | upload finished offline wandb runs |

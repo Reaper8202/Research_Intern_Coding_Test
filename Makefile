@@ -22,7 +22,8 @@ MANIFEST ?= $(REPORTS_DIR)/final/manifest.json
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
 	modalities tokenize pipeline-smoke pretrain finetune cv-summary experiments \
-	experiments-summary lightgbm freeze val-score predict wandb-sync clean
+	experiments-summary lightgbm stacking calibration lightgbm-final freeze val-score \
+	predict submission package wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -128,6 +129,28 @@ experiments-summary:
 		--models $(MODELS_DIR)/transformer --reports $(REPORTS_DIR)/transformer \
 		--log-file $(LOGS_DIR)/experiments.log
 
+# Round 3 (configs/budget_v3.toml): CV-only stacking and calibration of the C1 seed ensemble.
+C1_CONFIGS = configs/experiments/v2_c1.toml configs/experiments/v2_c1_seed2.toml \
+	configs/experiments/v2_c1_seed3.toml
+
+stacking:
+	$(PYTHON) -m ehrforecast.stacking --dataset $(PROCESSED_DIR) --models $(MODELS_DIR) \
+		--transformer $(C1_CONFIGS) --lightgbm lightgbm_clean \
+		--reports $(REPORTS_DIR)/stacking/clean --log-file $(LOGS_DIR)/stacking.log
+
+calibration:
+	$(PYTHON) -m ehrforecast.calibration --dataset $(PROCESSED_DIR) --models $(MODELS_DIR) \
+		--oof $(REPORTS_DIR)/stacking/clean/oof_stack_logit_mean.parquet \
+		--reports $(REPORTS_DIR)/calibration/stack --log-file $(LOGS_DIR)/calibration.log
+
+# Final LightGBM base models: fit on all training patients, save boosters, write val and test
+# probabilities (own process: no PyTorch). Frozen with the transformer members by `make freeze`.
+lightgbm-final:
+	$(PYTHON) -m ehrforecast.lightgbm_final fit --dataset $(PROCESSED_DIR) \
+		--settings $(REPORTS_DIR)/lightgbm_clean/cv_summary.json --feature-sets counts counts_values \
+		--models $(MODELS_DIR)/lightgbm_final --reports $(REPORTS_DIR)/lightgbm_final \
+		--log-file $(LOGS_DIR)/lightgbm_final.log
+
 # P4e: record every artifact hash of the submitted ensemble (configs/final.toml).
 freeze:
 	$(PYTHON) -m ehrforecast.val_score freeze --config configs/final.toml \
@@ -141,11 +164,30 @@ val-score:
 		--reports $(REPORTS_DIR)/val --device $(DEVICE) --wandb $(WANDB_MODE) \
 		--wandb-entity $(WANDB_ENTITY) --log-file $(LOGS_DIR)/val_score.log
 
-# Step 5: test-split probabilities from the frozen ensemble (reads no labels).
+# Step 5: test-split transformer probabilities from the frozen members (reads no labels), then
+# the submitted file: the stack of configs/final.toml over the transformer and LightGBM files.
 predict:
 	$(PYTHON) -m ehrforecast.predict --dataset $(PROCESSED_DIR) --split test \
 		--run-dir $$($(PYTHON) -c 'import json; print(" ".join("$(MODELS_DIR)/" + m["run_dir"] for m in json.load(open("$(MANIFEST)"))["members"]))') \
-		--device $(DEVICE) --out predictions.csv --log-file $(LOGS_DIR)/predict.log
+		--device $(DEVICE) --out $(REPORTS_DIR)/final/test_predictions_transformer.csv \
+		--log-file $(LOGS_DIR)/predict.log
+
+submission:
+	$(PYTHON) -m ehrforecast.submission --config configs/final.toml --dataset $(PROCESSED_DIR) \
+		--transformer $(REPORTS_DIR)/final/test_predictions_transformer.csv \
+		--lightgbm-dir $(REPORTS_DIR)/lightgbm_final --split test --out predictions.csv \
+		--log-file $(LOGS_DIR)/submission.log
+
+# Public package for the Hugging Face Hub (a fresh directory), then the clean-reload check.
+package:
+	$(PYTHON) -c "import shutil; shutil.rmtree('$(MODELS_DIR)/hf', ignore_errors=True)"
+	$(PYTHON) -m ehrforecast.hf_package build --final configs/final.toml --manifest $(MANIFEST) \
+		--models $(MODELS_DIR) --dataset $(PROCESSED_DIR) --out $(MODELS_DIR)/hf \
+		--configs configs/final.toml configs/v2_base.toml $(C1_CONFIGS) \
+		--repo Reaper8202/ehr-forecast --val-summary $(REPORTS_DIR)/val/val_summary.json
+	$(PYTHON) -m ehrforecast.hf_package verify --package $(MODELS_DIR)/hf \
+		--dataset $(PROCESSED_DIR) --predictions predictions.csv --device $(DEVICE) \
+		--out $(REPORTS_DIR)/final/package_verify_cpu.json
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
 wandb-sync:
