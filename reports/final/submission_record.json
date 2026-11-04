@@ -1,6 +1,6 @@
 {
-  "recorded_at": "2026-11-04T15:18:24-0500",
-  "commit": "2852f4d8c07b5c71960ee4ceac72878ab8129685",
+  "recorded_at": "2026-11-04T16:26:12-0500",
+  "commit": "b68967848178a4981c482c1c895d9ea5610f0627",
   "tracked_changes": "",
   "files": {
     "predictions.csv": {
@@ -8,8 +8,8 @@
       "bytes": 287482
     },
     "docs/report.pdf": {
-      "sha256": "d7acaae1ec4309909c4b2eedc35379a3b0b0017f80a373300e41f768a73969dd",
-      "bytes": 544624
+      "sha256": "b4f10f89c83c323bd07918e6d0a5385484a897ad2789c02b0201e3563df3becb",
+      "bytes": 545038
     },
     "reports/final/manifest.json": {
       "sha256": "f017b91404558afd5cfee371cb531636fda0cf4a7e15e810d20fe39b45f251de",
@@ -24,8 +24,8 @@
       "bytes": 1312
     },
     "docs/derek_wu_results.pdf": {
-      "sha256": "d7acaae1ec4309909c4b2eedc35379a3b0b0017f80a373300e41f768a73969dd",
-      "bytes": 544624
+      "sha256": "b4f10f89c83c323bd07918e6d0a5385484a897ad2789c02b0201e3563df3becb",
+      "bytes": 545038
     }
   }
 }
