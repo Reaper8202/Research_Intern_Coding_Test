@@ -1,5 +1,5 @@
 {
-  "bundle_id": "168b78f5b5d8",
+  "bundle_id": "093a88a1f5b5",
   "comparison_models": {
     "incidence_at_risk": {
       "at_risk": {
@@ -112,14 +112,42 @@
         "prior_mask_applied": true,
         "scope": "all_patients"
       }
+    },
+    "transformer": {
+      "at_risk": {
+        "mAP": 0.20850911436866895,
+        "macro_auroc": 0.7215727699393895,
+        "macro_brier": 0.045539838723273565,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 365,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "at_risk"
+      },
+      "masked": {
+        "mAP": 0.20850911436866895,
+        "macro_auroc": 0.7512942352686062,
+        "macro_brier": 0.03809261287448849,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 365,
+        "n_targets": 40,
+        "n_targets_auroc": 40,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
     }
   },
   "ensemble_members": 15,
   "final": {
     "at_risk": {
-      "mAP": 0.20850911436866895,
-      "macro_auroc": 0.7215727699393895,
-      "macro_brier": 0.045539838723273565,
+      "mAP": 0.2575936036477424,
+      "macro_auroc": 0.7390990673006914,
+      "macro_brier": 0.04366825024622988,
       "metric_version": "first-diagnosis-probabilities-v2",
       "n_patients": 365,
       "n_targets": 40,
@@ -130,9 +158,9 @@
       "scope": "at_risk"
     },
     "masked": {
-      "mAP": 0.20850911436866895,
-      "macro_auroc": 0.7512942352686062,
-      "macro_brier": 0.03809261287448849,
+      "mAP": 0.2575936036477424,
+      "macro_auroc": 0.766966242453014,
+      "macro_brier": 0.03648051030528462,
       "metric_version": "first-diagnosis-probabilities-v2",
       "n_patients": 365,
       "n_targets": 40,
@@ -147,32 +175,32 @@
     "comparison": "single_model",
     "eligibility_note": "AUROC can omit different targets in different resamples.",
     "mAP": {
-      "ci_high": 0.2112817774772463,
-      "ci_low": 0.19209708678720586,
+      "ci_high": 0.26807302995482735,
+      "ci_low": 0.23443775233839545,
       "eligible_targets_histogram": {
         "40": 1000
       },
       "nonfinite_resamples": 0,
-      "point": 0.20850911436866895
+      "point": 0.2575936036477424
     },
     "macro_auroc": {
-      "ci_high": 0.7731756009379294,
-      "ci_low": 0.7300867594855714,
+      "ci_high": 0.7875439230821786,
+      "ci_low": 0.7463289900248895,
       "eligible_targets_histogram": {
         "39": 25,
         "40": 975
       },
       "nonfinite_resamples": 0,
-      "point": 0.7512942352686062
+      "point": 0.766966242453014
     },
     "macro_brier": {
-      "ci_high": 0.04113788385067016,
-      "ci_low": 0.035092804555761005,
+      "ci_high": 0.03924938094952751,
+      "ci_low": 0.033659429827619894,
       "eligible_targets_histogram": {
         "40": 1000
       },
       "nonfinite_resamples": 0,
-      "point": 0.03809261287448849
+      "point": 0.03648051030528462
     },
     "method": "patient BCa, 95%",
     "metric_version": "first-diagnosis-probabilities-v2",
@@ -193,32 +221,32 @@
       "comparison": "A_minus_B",
       "eligibility_note": "AUROC can omit different targets in different resamples.",
       "mAP": {
-        "ci_high": 0.08641243542887989,
-        "ci_low": 0.03577658729130343,
+        "ci_high": 0.13928805663145993,
+        "ci_low": 0.07801572870173533,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": 0.06749046030971956
+        "point": 0.11657494958879303
       },
       "macro_auroc": {
-        "ci_high": 0.04445165143841441,
-        "ci_low": 0.0005370960123268268,
+        "ci_high": 0.0619518660567185,
+        "ci_low": 0.015802936289438387,
         "eligible_targets_histogram": {
           "39": 25,
           "40": 975
         },
         "nonfinite_resamples": 0,
-        "point": 0.024480357613037795
+        "point": 0.04015236479744566
       },
       "macro_brier": {
-        "ci_high": -0.00011160474816646176,
-        "ci_low": -0.0016983282275769244,
+        "ci_high": -0.0017242178337204433,
+        "ci_low": -0.003425539498798132,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": -0.0009126301598497213
+        "point": -0.002524732729053597
       },
       "method": "patient BCa, 95%",
       "metric_version": "first-diagnosis-probabilities-v2",
@@ -236,32 +264,32 @@
       "comparison": "A_minus_B",
       "eligibility_note": "AUROC can omit different targets in different resamples.",
       "mAP": {
-        "ci_high": -0.010995741069887195,
-        "ci_low": -0.06029800517286082,
+        "ci_high": 0.039857004562802056,
+        "ci_low": 0.0022997170293943252,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": -0.030264072215704402
+        "point": 0.018820417063369066
       },
       "macro_auroc": {
-        "ci_high": 0.010210293710550962,
-        "ci_low": -0.03143645207431167,
+        "ci_high": 0.015723578849829438,
+        "ci_low": -0.005128488228448545,
         "eligible_targets_histogram": {
           "39": 25,
           "40": 975
         },
         "nonfinite_resamples": 0,
-        "point": -0.010340012844708757
+        "point": 0.005331994339699109
       },
       "macro_brier": {
-        "ci_high": 0.001735763522290593,
-        "ci_low": 0.0004997369213563713,
+        "ci_high": -0.00021845283273050847,
+        "ci_low": -0.0007911322189570675,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": 0.0011128075936779544
+        "point": -0.0004992949755259213
       },
       "method": "patient BCa, 95%",
       "metric_version": "first-diagnosis-probabilities-v2",
@@ -279,32 +307,32 @@
       "comparison": "A_minus_B",
       "eligibility_note": "AUROC can omit different targets in different resamples.",
       "mAP": {
-        "ci_high": -0.02396251099435004,
-        "ci_low": -0.0801219236652482,
+        "ci_high": 0.018752643652478057,
+        "ci_low": -0.017377519026111236,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": -0.04839350587559252
+        "point": 0.0006909834034809492
       },
       "macro_auroc": {
-        "ci_high": 0.012376593649003089,
-        "ci_low": -0.030545205676097423,
+        "ci_high": 0.01943661611097453,
+        "ci_low": -0.0040375961245083325,
         "eligible_targets_histogram": {
           "39": 25,
           "40": 975
         },
         "nonfinite_resamples": 0,
-        "point": -0.006936026908461401
+        "point": 0.008735980275946464
       },
       "macro_brier": {
-        "ci_high": 0.0021626727186713933,
-        "ci_low": 0.0007463875994411425,
+        "ci_high": 0.0001803677880937665,
+        "ci_low": -0.0005565069511753029,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": 0.0014413748667317858
+        "point": -0.0001707277024720899
       },
       "method": "patient BCa, 95%",
       "metric_version": "first-diagnosis-probabilities-v2",
@@ -322,32 +350,75 @@
       "comparison": "A_minus_B",
       "eligibility_note": "AUROC can omit different targets in different resamples.",
       "mAP": {
-        "ci_high": 0.013290926555126247,
-        "ci_low": -0.03918403473473053,
+        "ci_high": 0.06185246118721398,
+        "ci_low": 0.011297074835175294,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": -0.013239548560566111
+        "point": 0.035844940718507357
       },
       "macro_auroc": {
-        "ci_high": 0.006087817670780923,
-        "ci_low": -0.030845692679982432,
+        "ci_high": 0.020065087781179533,
+        "ci_low": -0.01030732546382073,
         "eligible_targets_histogram": {
           "39": 25,
           "40": 975
         },
         "nonfinite_resamples": 0,
-        "point": -0.012727450586486388
+        "point": 0.002944556597921477
       },
       "macro_brier": {
-        "ci_high": 0.0004415183798199488,
-        "ci_low": -0.0010149468236758117,
+        "ci_high": -0.001198720138476104,
+        "ci_low": -0.002674712646751386,
         "eligible_targets_histogram": {
           "40": 1000
         },
         "nonfinite_resamples": 0,
-        "point": -0.00032913384179661387
+        "point": -0.0019412364110004895
+      },
+      "method": "patient BCa, 95%",
+      "metric_version": "first-diagnosis-probabilities-v2",
+      "n_boot": 1000,
+      "scope": "all_patients",
+      "seed": 0,
+      "selection_note": "Intervals exclude training and model-selection uncertainty.",
+      "warning_note": "Auxiliary eligibility counts can have degenerate unused intervals.",
+      "warnings": [
+        "The BCa confidence interval cannot be calculated. This problem is known to occur when the distribution is degenerate or the statistic is np.min.",
+        "invalid value encountered in divide"
+      ]
+    },
+    "final_minus_transformer": {
+      "comparison": "A_minus_B",
+      "eligibility_note": "AUROC can omit different targets in different resamples.",
+      "mAP": {
+        "ci_high": 0.07181115971854352,
+        "ci_low": 0.03320514993598226,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.04908448927907347
+      },
+      "macro_auroc": {
+        "ci_high": 0.029635675707807754,
+        "ci_low": 0.002411089786451186,
+        "eligible_targets_histogram": {
+          "39": 25,
+          "40": 975
+        },
+        "nonfinite_resamples": 0,
+        "point": 0.015672007184407866
+      },
+      "macro_brier": {
+        "ci_high": -0.0011184309517044823,
+        "ci_low": -0.002185213141748403,
+        "eligible_targets_histogram": {
+          "40": 1000
+        },
+        "nonfinite_resamples": 0,
+        "point": -0.0016121025692038757
       },
       "method": "patient BCa, 95%",
       "metric_version": "first-diagnosis-probabilities-v2",
@@ -367,9 +438,9 @@
   "subgroups": {
     "anchor_before_2015": {
       "final": {
-        "mAP": 0.2386573670021205,
-        "macro_auroc": 0.7222159016039369,
-        "macro_brier": 0.04877001327170653,
+        "mAP": 0.2814680523063198,
+        "macro_auroc": 0.7477582292044518,
+        "macro_brier": 0.046174389071788544,
         "metric_version": "first-diagnosis-probabilities-v2",
         "n_patients": 155,
         "n_targets": 40,
@@ -431,13 +502,26 @@
         "prior_mask_applied": true,
         "scope": "all_patients"
       },
-      "n_patients": 155
+      "n_patients": 155,
+      "transformer": {
+        "mAP": 0.2386573670021205,
+        "macro_auroc": 0.7222159016039369,
+        "macro_brier": 0.04877001327170653,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 155,
+        "n_targets": 40,
+        "n_targets_auroc": 39,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
     },
     "anchor_from_2015": {
       "final": {
-        "mAP": 0.12858681905272837,
-        "macro_auroc": 0.730250709637988,
-        "macro_brier": 0.030211674486065643,
+        "mAP": 0.1825432989218078,
+        "macro_auroc": 0.7461853751288404,
+        "macro_brier": 0.029325504549055532,
         "metric_version": "first-diagnosis-probabilities-v2",
         "n_patients": 210,
         "n_targets": 40,
@@ -499,13 +583,26 @@
         "prior_mask_applied": true,
         "scope": "all_patients"
       },
-      "n_patients": 210
+      "n_patients": 210,
+      "transformer": {
+        "mAP": 0.12858681905272837,
+        "macro_auroc": 0.730250709637988,
+        "macro_brier": 0.030211674486065643,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 210,
+        "n_targets": 40,
+        "n_targets_auroc": 33,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
     },
     "modality_input": {
       "final": {
-        "mAP": 0.1711835055263364,
-        "macro_auroc": 0.7189832333193187,
-        "macro_brier": 0.03349087968192106,
+        "mAP": 0.1764026701855649,
+        "macro_auroc": 0.7065260737173361,
+        "macro_brier": 0.03282589067747613,
         "metric_version": "first-diagnosis-probabilities-v2",
         "n_patients": 21,
         "n_targets": 40,
@@ -567,7 +664,21 @@
         "prior_mask_applied": true,
         "scope": "all_patients"
       },
-      "n_patients": 21
+      "n_patients": 21,
+      "transformer": {
+        "mAP": 0.1711835055263364,
+        "macro_auroc": 0.7189832333193187,
+        "macro_brier": 0.03349087968192106,
+        "metric_version": "first-diagnosis-probabilities-v2",
+        "n_patients": 21,
+        "n_targets": 40,
+        "n_targets_auroc": 18,
+        "n_targets_average_precision": 40,
+        "n_targets_brier": 40,
+        "prior_mask_applied": true,
+        "scope": "all_patients"
+      }
     }
-  }
+  },
+  "submission": "logit_mean of ['transformer', 'lightgbm_counts', 'lightgbm_counts_values'] with Platt scaling"
 }

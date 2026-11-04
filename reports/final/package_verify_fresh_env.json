@@ -5,6 +5,15 @@
   "n_patients": 358,
   "n_targets": 40,
   "package": "models/hf",
+  "submission": {
+    "bases": [
+      "transformer",
+      "lightgbm_counts",
+      "lightgbm_counts_values"
+    ],
+    "platt_weights": "calibration/platt_weights.json",
+    "stacker": "logit_mean"
+  },
   "torch": "2.11.0",
-  "verified_at": "2026-11-03T20:55:31-0500"
+  "verified_at": "2026-11-03T22:37:34-0500"
 }

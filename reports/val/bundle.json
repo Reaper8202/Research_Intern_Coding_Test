@@ -1,15 +1,15 @@
 {
-  "bundle_id": "168b78f5b5d8",
-  "completed_at": "2026-11-03T20:53:29-0500",
+  "bundle_id": "093a88a1f5b5",
+  "completed_at": "2026-11-03T22:34:02-0500",
   "curves": {
     "checkpoints_scored": 209,
     "mean_best_epoch_val_mAP": 0.2003727121760412,
     "mean_best_epoch_val_macro_auroc": 0.7432428114264404
   },
   "device": "cpu",
-  "final_config_sha256": "61f1671969961992450147fa26fc572ce218ba243f8331f8658c3e77ebc3f217",
-  "freeze_commit": "8cd6e9c5daefbb5a12fee65a52431fbb2a3f4ae6",
-  "manifest_sha256": "fb31147d7b3fe5d428b43f6f4d30c34e13ad9ef4cdadee31b422592d430385aa",
+  "final_config_sha256": "9f4f4f0bd3237cb5f8e44105a3b2a71a5f5d736549b490dec8e0e05e355a1e00",
+  "freeze_commit": "6f923e0bf323de191cc45c53a9a691de6243a5b2",
+  "manifest_sha256": "f017b91404558afd5cfee371cb531636fda0cf4a7e15e810d20fe39b45f251de",
   "members": [
     "transformer/small-v2-c1/fold0/F",
     "transformer/small-v2-c1/fold1/F",
@@ -27,15 +27,15 @@
     "transformer/small-v2-c1-seed3/fold3/F",
     "transformer/small-v2-c1-seed3/fold4/F"
   ],
-  "replacement_reason": null,
-  "score_commit": "8e8725e2c2bcfdb8e50e52aa47d661f8e0d723ee",
-  "started_at": "2026-11-03T20:46:21-0500",
+  "replacement_reason": "attempt 2: the submission changed to the round-3 blend of the transformer ensemble with the two final LightGBM models plus Platt scaling (D38; budget_v3 rules S and C, decided on training CV only). Attempt 1 (bundle 168b78f5b5d8) scored the transformer ensemble alone and is kept under reports/val/attempts/.",
+  "score_commit": "8005b90cad7c08a99348eb2b73abc1974e079596",
+  "started_at": "2026-11-03T22:28:32-0500",
   "status": "completed",
-  "val_mAP": 0.20850911436866895,
-  "val_macro_auroc": 0.7512942352686062,
+  "val_mAP": 0.2575936036477424,
+  "val_macro_auroc": 0.766966242453014,
   "wandb_final_run": {
-    "id": "2ekrv8al",
-    "url": "https://forge.coreweave.com/wandb/derek-wu820-university-of-toronto/ehr-forecast/runs/2ekrv8al"
+    "id": "25g9nobr",
+    "url": "https://forge.coreweave.com/wandb/derek-wu820-university-of-toronto/ehr-forecast/runs/25g9nobr"
   },
   "wandb_mode": "online"
 }

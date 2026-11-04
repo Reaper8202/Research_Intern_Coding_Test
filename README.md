@@ -4,7 +4,7 @@ Predicts which of 40 conditions a patient will be diagnosed with for the first t
 years after a landmark ("anchor") date, using only the synthetic EHR events recorded before that
 date. Data: the Synthea Coherent dataset as released for the research intern coding test.
 
-Status: steps 1 to 4 are done and the official val bundle has run (step 5 in progress). The CSV-only transformer (`small-v1`) is trained on all five
+Status: steps 1 to 5 are done except publishing. The submission is the round-3 blend (D38). The CSV-only transformer (`small-v1`) is trained on all five
 training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
 multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
 MRI token from a 3-D CNN. A pre-registered tuning round (D35, `configs/budget.toml`) selected
@@ -184,24 +184,24 @@ removes everything that these commands generate, except the committed reports.
 
 ## Results
 
-Official val (365 patients, 685 positive labels), scored once by the frozen bundle
-(`reports/val/`, bundle in `reports/val/bundle.json`). All models use the common prior-condition
-mask; intervals are 95% patient BCa bootstrap intervals (1,000 resamples).
+Official val (365 patients, 685 positive labels), scored by the frozen bundle. Two attempts, both
+recorded: attempt 1 (`reports/val/attempts/168b78f5b5d8/`) scored the transformer ensemble alone;
+attempt 2 (`reports/val/`) scored the round-3 blend after it was adopted on training CV. All
+models use the common prior-condition mask; intervals are 95% patient BCa bootstrap intervals.
 
 | Model | Macro AUROC | mAP | Brier |
 |---|---|---|---|
-| **Submitted transformer** (`small-v2-c1`, 3 seeds x 5 folds) | **0.751** [0.730, 0.773] | **0.209** [0.192, 0.211] | 0.0381 |
-| Logistic regression, code counts + age and sex (step 2) | 0.764 | 0.222 | 0.0384 |
-| LightGBM counts (refitted on train, CV-selected setting) | 0.762 | 0.239 | 0.0370 |
+| **Submitted blend**: transformer ensemble + LightGBM counts + LightGBM counts and values, mean of logits, Platt-scaled | **0.767** [0.746, 0.788] | **0.258** [0.234, 0.268] | 0.0365 |
+| Transformer ensemble (`small-v2-c1`, 3 seeds x 5 folds) | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] | 0.0381 |
+| LightGBM counts (CV-selected setting, fitted on all of train) | 0.762 | 0.239 | 0.0370 |
 | LightGBM counts + values | 0.758 | 0.257 | 0.0367 |
+| Logistic regression, code counts + age and sex (step 2) | 0.764 | 0.222 | 0.0384 |
 | Age-sex incidence table, at-risk patients only (step 2) | 0.727 | 0.141 | 0.0390 |
 
-Paired differences, transformer minus comparison: at-risk incidence +0.025 AUROC [+0.001, +0.045];
-LightGBM counts -0.010 [-0.031, +0.010] AUROC and -0.030 [-0.060, -0.011] mAP; logistic
-regression -0.013 [-0.031, +0.006] AUROC. On val the transformer beats the epidemiological
-reference, ranks about as well as the two count-based baselines, and trails them on average
-precision. Training CV said the same (`docs/decisions.md`, D36). Test labels are hidden; test
-scores belong to the organisers. Per-target and subgroup results: `docs/model_results.md`.
+Paired differences, blend minus: transformer ensemble +0.016 AUROC [+0.002, +0.030] and +0.049 mAP
+[+0.033, +0.072]; LightGBM counts +0.005 AUROC [-0.005, +0.016] and +0.019 mAP [+0.002, +0.040].
+Training CV said the same (`docs/decisions.md`, D38). Test labels are hidden; test scores belong
+to the organisers. Per-target and subgroup results: `docs/model_results.md`.
 
 ## Package modules
 

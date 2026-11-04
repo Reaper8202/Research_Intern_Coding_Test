@@ -81,9 +81,9 @@ the blend was adopted on training CV; both attempts are recorded in the reposito
 
 | | Macro AUROC | mAP |
 |---|---|---|
-| Submitted blend | [VAL_BLEND_AUROC] | [VAL_BLEND_MAP] |
-| Transformer ensemble alone | [VAL_T_AUROC] | [VAL_T_MAP] |
-| LightGBM on code counts alone | [VAL_L1_AUROC] | [VAL_L1_MAP] |
+| Submitted blend | 0.767 [0.746, 0.788] | 0.258 [0.234, 0.268] |
+| Transformer ensemble alone | 0.751 | 0.209 |
+| LightGBM on code counts alone | 0.762 | 0.239 |
 | Age-sex incidence table, at-risk patients (reference) | 0.727 | 0.141 |
 
 Training-split nested five-fold CV, pooled out of fold: blend AUROC 0.774, mAP 0.212; transformer

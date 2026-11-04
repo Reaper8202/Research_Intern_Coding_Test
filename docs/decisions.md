@@ -505,3 +505,38 @@ targets are near chance for every model, the oracle choice between T and LightGB
 reaches only 0.778 in CV, and the blend is 0.774 pooled. Every number in this entry comes from
 the same five folds as the 23 earlier configurations, so it carries selection optimism; the
 replacement val bundle (attempt 2) and the hidden test are the checks.
+
+**Official val, attempt 2 (bundle `093a88a1f5b5`, 3 November 2026, 22:28; `reports/val/`).**
+Attempt 1 (`reports/val/attempts/168b78f5b5d8/`) scored the transformer ensemble alone before the
+blend existed; its numbers were known when round 3 was written, and round 3 used training CV
+only. 365 patients, common mask, 1,000 patient BCa resamples.
+
+| Model | Macro AUROC | mAP | Brier | At-risk AUROC |
+|---|---|---|---|---|
+| **Blend (submitted)** | **0.767** [0.746, 0.788] | **0.258** [0.234, 0.268] | 0.0365 | 0.739 |
+| Transformer ensemble (same members as attempt 1) | 0.751 | 0.209 | 0.0381 | 0.722 |
+| LightGBM counts | 0.762 | 0.239 | 0.0370 | 0.733 |
+| LightGBM counts + values | 0.758 | 0.257 | 0.0367 | 0.729 |
+| Logistic regression, codes (step 2) | 0.764 | 0.222 | 0.0384 | 0.733 |
+| At-risk age-sex incidence (step 2) | 0.727 | 0.141 | 0.0390 | 0.696 |
+
+| Blend minus | AUROC | mAP | Brier |
+|---|---|---|---|
+| transformer ensemble | +0.016 [+0.002, +0.030] | +0.049 [+0.033, +0.072] | -0.0016 [-0.0022, -0.0011] |
+| LightGBM counts | +0.005 [-0.005, +0.016] | +0.019 [+0.002, +0.040] | -0.0005 [-0.0008, -0.0002] |
+| LightGBM counts + values | +0.009 [-0.004, +0.019] | +0.001 [-0.017, +0.019] | -0.0002 [-0.0006, +0.0002] |
+| logistic regression, codes | +0.003 [-0.010, +0.020] | +0.036 [+0.011, +0.062] | -0.0019 [-0.0027, -0.0012] |
+| at-risk incidence | +0.040 [+0.016, +0.062] | +0.117 [+0.078, +0.139] | -0.0025 [-0.0034, -0.0017] |
+
+Val agrees with CV. The blend is above its transformer part with an interval above zero on every
+metric; its AUROC lead over LightGBM counts is inside the interval on 365 patients, its mAP and
+Brier leads are not. By era: anchor before 2015 (155 patients) blend 0.748 / 0.281, LightGBM
+counts 0.752 / 0.260, transformer 0.722 / 0.239; from 2015 (210) 0.746 / 0.183, 0.739 / 0.192,
+0.730 / 0.129. Per target (`reports/val/val_per_target.csv`), the blend is above the transformer on
+29 of 40 targets and above LightGBM counts on 17. It recovers most of the transformer's losses on
+the count-driven conditions: myocardial infarction 0.927 (transformer 0.827, LightGBM 0.904),
+osteoporosis 0.883 (0.804, 0.895), recurrent rectal polyp 0.931 (0.860, 0.946), pathological
+fracture 0.911 (0.847, 0.909); it keeps most of the transformer's lead on the paired brain targets
+(0.892 against 0.832); the three lung-cancer codes stay below LightGBM (0.81 to 0.82 against 0.83
+to 0.85); nine targets stay below 0.6. The val curves are the attempt-1 curves exactly, since the
+members did not change.

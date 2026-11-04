@@ -25,7 +25,7 @@ This revision changes the plan. It does not complete an implementation phase.
 | 2 | Baselines: age-sex incidence tables and logistic regression on code counts plus age and sex (`ehrforecast.train_baseline`) | done |
 | 3 | Folds, common prior mask, baseline reproduction, input contracts, tokenizer, sequences, and leakage tests (P3a–P3c) | done (not yet reviewed by Derek) |
 | 4 | Complete small-model run, three training methods, full comparisons, bounded extensions, and frozen val evaluation (P4a–P4f; generation deferred) | done: D34–D36 rounds complete; frozen val bundle run once on 3 November (D37) |
-| 5 | Test predictions, report, GitHub, Hugging Face | in progress: `predictions.csv` written; package built; report drafted |
+| 5 | Test predictions, report, GitHub, Hugging Face | done locally: `predictions.csv`, package, report PDF; publishing waits for Derek |
 
 ## Where each known risk is handled
 
@@ -167,8 +167,11 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   probabilities as head inputs) was skipped by its condition. D38 records the numbers.
 * Rule A1, the 4 x 192 architecture screen on fold 0, failed (-0.014 AUROC against C1 on the same
   fold); the architecture stays at 2 x 128 (D38).
-* Next: refreeze, the replacement val bundle (attempt 2, disclosed; attempt 1 stays under
-  `reports/val/attempts/`), `make predict`, `make submission`, `make package`, report.
+* Refrozen (commit 6f923e0 and the manifest commit after it). The replacement val bundle
+  (attempt 2, `093a88a1f5b5`) scored the blend at 0.767 [0.746, 0.788] AUROC and 0.258 mAP;
+  attempt 1 stays under `reports/val/attempts/`. `predictions.csv` is the blend. The package
+  reproduces it exactly from its own files. Publishing (GitHub public, Hugging Face upload,
+  wandb public) waits for Derek.
 
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the

@@ -27,9 +27,9 @@ parameters each; three seeds, five cross-validation folds, self-pretrained on pr
 sequences and fine-tuned on the 40 labels), and two LightGBM models on code counts, one with the
 latest value of each numeric observation. Their logits are averaged and a per-target Platt map
 fitted on training out-of-fold predictions scales the result. On the official validation split
-(365 patients) the blend scores macro AUROC **[VAL_BLEND_AUROC]** and mAP **[VAL_BLEND_MAP]**; the
-transformer ensemble alone scores [VAL_T_AUROC] / [VAL_T_MAP] and LightGBM on counts alone
-[VAL_L1_AUROC] / [VAL_L1_MAP]. Test scores are the organisers'.
+(365 patients) the blend scores macro AUROC **0.767 [0.746, 0.788]** and mAP **0.258 [0.234, 0.268]**; the
+transformer ensemble alone scores 0.751 / 0.209 and LightGBM on counts alone
+0.762 / 0.239. Test scores are the organisers'.
 
 The transformer is the part of the system this project built and studied, and it is what the
 report describes. The blend was adopted at the end by a rule written before its score, because in
@@ -253,8 +253,12 @@ grows with how many of a specific event has happened (screening visits, bone-den
 nodule follow-ups), which a count feature states directly; the transformer has to infer it from a
 window that drops 15 to 18% of event tokens for exactly the dense histories where counts are high.
 The count branch tested in round 2 did not close the gap, a longer context did not help on fold 0,
-and that is why the blend helps: the two models fail on different targets, and in CV the better
-of the two per target would reach 0.778 against 0.774 for the blend.
+and that is why the blend helps: the two models fail on different targets. On val the blend is
+above the transformer on 29 of 40 targets and above LightGBM on 17; it recovers most of the
+transformer's count-driven losses (myocardial infarction 0.927 against 0.827 and 0.904,
+osteoporosis 0.883 against 0.804 and 0.895, pathological fracture 0.911 against 0.847 and 0.909)
+while keeping most of the transformer's lead on the brain pair (0.892 against 0.832). In CV the
+better of the two per target would reach 0.778 against 0.774 for the blend.
 
 **Anchor era.** Anchors are five years before the last encounter, so an anchor before 2015
 almost always means the patient died by 2020 (1,155 of 1,219 training patients), and those
@@ -265,7 +269,7 @@ reported.
 
 **Calibration.** Prior-condition cells are exact zeros. The raw blend under-predicts slightly in
 the middle of its range (Figure 3); the Platt map corrects it. On val the blend's Brier score is
-[VAL_BLEND_BRIER] against [VAL_T_BRIER] for the transformer alone.
+0.0365 against 0.0381 for the transformer alone.
 
 ![Reliability of the blend on training out-of-fold predictions, before and after Platt scaling,
 10 equal-mass bins of all at-risk patient-target cells.](figures/reliability.png){width=58%}
@@ -287,17 +291,17 @@ and LightGBM per target reaches 0.778 in CV.
 | train CV, pooled out of fold | blend (submitted) | 0.774 | 0.212 |
 | train CV, pooled out of fold | transformer ensemble | 0.761 | 0.181 |
 | train CV, pooled out of fold | LightGBM counts | 0.764 | 0.188 |
-| **val** (365), attempt 2 | **blend (submitted)** | **[VAL_BLEND_AUROC]** | **[VAL_BLEND_MAP]** |
-| val, attempt 2 | transformer ensemble | [VAL_T_AUROC] | [VAL_T_MAP] |
-| val, attempt 2 | LightGBM counts | [VAL_L1_AUROC] | [VAL_L1_MAP] |
-| val, attempt 2 | LightGBM counts + values | [VAL_L2_AUROC] | [VAL_L2_MAP] |
-| val, attempt 2 | logistic regression, codes | [VAL_LR_AUROC] | [VAL_LR_MAP] |
+| **val** (365), attempt 2 | **blend (submitted)** | **0.767 [0.746, 0.788]** | **0.258 [0.234, 0.268]** |
+| val, attempt 2 | transformer ensemble | 0.751 | 0.209 |
+| val, attempt 2 | LightGBM counts | 0.762 | 0.239 |
+| val, attempt 2 | LightGBM counts + values | 0.758 | 0.257 |
+| val, attempt 2 | logistic regression, codes | 0.764 | 0.222 |
 | val, attempt 2 | age-sex incidence, at risk | 0.727 | 0.141 |
 | val, attempt 1 | transformer ensemble | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] |
 | test (358) | blend (submitted) | organisers' score | organisers' score |
 
-Paired on val, blend minus transformer ensemble: AUROC [VAL_BLEND_MINUS_T]; blend minus LightGBM
-counts: AUROC [VAL_BLEND_MINUS_L1]. `predictions.csv` holds 358 rows by 40 code columns.
+Paired on val, blend minus transformer ensemble: AUROC +0.016 [+0.002, +0.030], mAP +0.049 [+0.033, +0.072]; blend minus LightGBM
+counts: AUROC +0.005 [-0.005, +0.016], mAP +0.019 [+0.002, +0.040]. `predictions.csv` holds 358 rows by 40 code columns.
 
 Reproduction: `make setup`, link the dataset to `data/raw`, then `make dataset`, `make modalities`,
 `make folds`, `make tokenize`, `make pretrain` and `make finetune` per fold and seed, `make

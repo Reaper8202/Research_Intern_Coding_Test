@@ -41,7 +41,7 @@ Decisions I made myself, with the AI presenting the evidence:
 
 * **Plan before code.** `docs/model_plan.md` was written and revised before the matching code.
   Each revision is dated and states whether any result was known when it was made.
-* **Tests as the review.** 175 unit tests, including mutation-style checks: changing `<` to
+* **Tests as the review.** 193 unit tests, including mutation-style checks: changing `<` to
   `<=` in the anchor-day rule fails a test; a future record added after the anchor must leave
   every prediction unchanged; a resumed run must match an uninterrupted one.
 * **Pre-registered selection.** The adoption rule (mean AUROC gain of at least 0.005, higher on at
@@ -49,6 +49,11 @@ Decisions I made myself, with the AI presenting the evidence:
 * **One val read.** `ehrforecast.val_score` refuses to run on a changed working tree, a changed
   artifact, or a completed bundle, and records a start and an end.
 * **Commit log as the record.** Every experiment block was committed before its scores.
+* **A second pair of eyes.** A separate, read-only AI session audited every data boundary with
+  file and line references (truncation, allowlists, labels, tokenizer, extra anchors, pretraining
+  windows, early stopping, modalities, LightGBM, evaluation, test split) and found no leak; its
+  two real findings (modality-file presence correlates with outcomes; a residual era signal)
+  are disclosed in the report. Another session wrote the regression tests it recommended.
 
 ## What the review found
 
@@ -65,6 +70,9 @@ Problems the AI tools introduced or missed, found by my review or by the checks 
   record of truth and the caveat is in D35.
 * The first bootstrap intervals used the percentile method and gave an interval that barely
   contained the point estimate (D7). BCa intervals replaced them.
+* The first Platt-scaling fit let five near-chance targets take a negative slope, which would
+  have reversed their ranking. A monotonicity test caught it; the fit now keeps the model's own
+  order when the slope is not positive.
 * A session ran out of usage mid-way through P3a. The handoff note in `docs/handoff_claude.md`
   let the next session finish the work without redoing it.
 
