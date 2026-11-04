@@ -9,7 +9,8 @@ import pandas as pd
 
 root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
 out = root / "docs" / "figures"
-BLUE, ORANGE, INK, MUTED, GRID = "#2a78d6", "#eb6834", "#1a1a19", "#5f5e58", "#e6e5e0"
+BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
+INK, MUTED, GRID = "#1a1a19", "#5f5e58", "#e6e5e0"
 plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
                      "xtick.color": MUTED, "ytick.color": MUTED, "axes.spines.top": False,
                      "axes.spines.right": False, "figure.dpi": 200})
@@ -34,29 +35,38 @@ ax.legend(frameon=False, loc="lower right", bbox_to_anchor=(1, 0.12), fontsize=8
 fig.tight_layout()
 fig.savefig(out / "val_curves.png")
 
-# Figure 2: per-target val AUROC, transformer vs LightGBM counts, sorted by transformer.
+# Figure 2: per-target val AUROC, blend against its two parts, sorted by the blend.
 t = pd.read_csv(root / "reports/val/val_per_target.csv")
 desc = pd.read_csv(root / "data/raw/target_conditions.csv", dtype=str).set_index("CODE")["DESCRIPTION"]
 w = t.pivot(index="code", columns="model", values="auroc")
+series = [("final", BLUE, "blend (submitted)"), ("lightgbm_counts", ORANGE, "LightGBM counts")]
+if "transformer" in w.columns:
+    series.append(("transformer", AQUA, "transformer ensemble"))
 npos = t[t.model == "final"].set_index("code")["n_pos"]
 w = w.sort_values("final")
-labels = [f"{desc[str(k)].replace(' (disorder)', '').replace(' (finding)', '').replace(' (situation)', '')[:40]} ({npos[k]})" for k in w.index]
+labels = [
+    f"{desc[str(k)].replace(' (disorder)', '').replace(' (finding)', '').replace(' (situation)', '')[:40]} ({npos[k]})"
+    for k in w.index
+]
 fig, ax = plt.subplots(figsize=(6.4, 7.2))
-y = range(len(w))
-for yi, (a, b) in enumerate(zip(w["final"], w["lightgbm_counts"])):
+y = list(range(len(w)))
+lo = w[[name for name, _, _ in series]].min(axis=1)
+hi = w[[name for name, _, _ in series]].max(axis=1)
+for yi, (a, b) in enumerate(zip(lo, hi)):
     ax.plot([a, b], [yi, yi], color=GRID, lw=1.2, zorder=1)
-ax.scatter(w["lightgbm_counts"], list(y), color=ORANGE, s=22, zorder=2, label="LightGBM counts", edgecolor="white", lw=0.6)
-ax.scatter(w["final"], list(y), color=BLUE, s=22, zorder=3, label="transformer ensemble", edgecolor="white", lw=0.6)
-ax.set_yticks(list(y))
+for name, color, label in reversed(series):
+    ax.scatter(w[name], y, color=color, s=22, zorder=2 + (name == "final"), label=label, edgecolor="white", lw=0.6)
+ax.set_yticks(y)
 ax.set_yticklabels(labels, fontsize=7)
 ax.axvline(0.5, color=MUTED, lw=0.8, ls=":")
 ax.set_xlim(0.38, 1.0)
 ax.set_xlabel("val AUROC (positives in parentheses)")
 ax.grid(axis="x", color=GRID, lw=0.6)
-ax.legend(frameon=False, loc="lower right", fontsize=8)
+handles, names = ax.get_legend_handles_labels()
+order = [names.index(label) for _, _, label in series]
+ax.legend([handles[i] for i in order], [names[i] for i in order], frameon=False, loc="lower right", fontsize=8)
 fig.tight_layout()
 fig.savefig(out / "val_per_target.png")
-print("wrote", out / "val_curves.png", out / "val_per_target.png")
 
 # Figure 3: reliability of the blend before and after Platt scaling (training CV, nested folds).
 # Log axes: with prevalence of 1 to 27 percent, equal-mass bins of all at-risk cells sit below 0.1.
