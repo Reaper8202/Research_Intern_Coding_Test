@@ -1,0 +1,3 @@
+experiment,config,folds_completed,mean_macro_auroc,mean_mAP,reference,vs_incumbent_mean_auroc_gain,vs_incumbent_folds_with_higher_auroc,vs_incumbent_mean_map_loss,vs_incumbent_passes_screen
+incumbent,small-v2-c1,5,0.7600900093209257,0.19816973997504847,,,,,
+A1-l4w192-screen,small-v3-l4w192,1,0.7577276358732635,0.2108551987401593,configs/experiments/v2_c1.toml,-0.014430943660394546,0.0,-0.003934412833591194,False

@@ -165,7 +165,8 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   counts + values (nested five-fold CV: +0.014 AUROC over the ensemble, +0.011 over LightGBM
   counts, intervals above zero). Rule C adopted per-target Platt scaling. Rule A2 (LightGBM
   probabilities as head inputs) was skipped by its condition. D38 records the numbers.
-* Rule A1, the 4 x 192 architecture screen on fold 0, is recorded in D38 when it completes.
+* Rule A1, the 4 x 192 architecture screen on fold 0, failed (-0.014 AUROC against C1 on the same
+  fold); the architecture stays at 2 x 128 (D38).
 * Next: refreeze, the replacement val bundle (attempt 2, disclosed; attempt 1 stays under
   `reports/val/attempts/`), `make predict`, `make submission`, `make package`, report.
 

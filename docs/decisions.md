@@ -492,8 +492,13 @@ unchanged by the scaling on every fold. Pooled out-of-fold AUROC moves (0.7744 t
 because the five folds' weights put probabilities on different scales; the single set of weights
 fitted on all training out-of-fold predictions (`platt_weights.json`) is what val and test use.
 
-**Rule A1, architecture (4 layers, width 192).** Result recorded below when the fold-0 screen
-completes.
+**Rule A1, architecture (4 layers, width 192; `reports/transformer/round3/`).** The larger body
+(2,255,040 parameters against 737,984) with the C1 recipe otherwise unchanged, own pretraining on
+fold 0: held-out pretraining loss 1.443 against 1.449 for the small model, but fine-tuning peaked
+at epoch 5 with AUROC 0.7577 against 0.7722 for C1 on the same fold (-0.0144; mAP +0.0039). The
+screen needed +0.005, so folds 1 to 4 were not run and the architecture stays at 2 x 128. On
+2,232 fit patients the extra capacity overfits the supervised task faster than it helps; a lower
+next-event loss did not transfer, as in D35 (60 pretraining epochs).
 
 **What the stack is not.** The 0.80 that was hoped for is out of reach on this data: nine
 targets are near chance for every model, the oracle choice between T and LightGBM per target

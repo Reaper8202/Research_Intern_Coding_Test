@@ -157,7 +157,9 @@ pooled readout, extra anchors, and target-weighted pretraining; a count branch, 
 weights, and dropout 0.5 failed. Full-timeline pretraining (reading fit patients' post-anchor
 events) passed the rule and was **not** adopted, because the task says to truncate at the anchor.
 Three seeds of the winner were trained and averaged. Round 3 tested the one architecture
-dimension never varied, depth and width: [A1_RESULT]. The full register with every score is in
+dimension never varied, depth and width: a 4-layer, width-192 model (2.26M parameters) reached a
+slightly lower pretraining loss but scored 0.758 against 0.772 on the fold-0 screen, so the small
+model stayed. The full register with every score is in
 `docs/decisions.md` (D35, D36, D38) and `reports/transformer/`.
 
 **Comparison models and the blend.** Alongside the transformer: an age-sex incidence table (the
