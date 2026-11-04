@@ -234,3 +234,96 @@ def _toml(value: dict[str, Any]) -> str:
         if isinstance(body, dict):
             lines += ["", f"[{section}]"] + [f"{k} = {literal(v)}" for k, v in body.items()]
     return "\n".join(lines) + "\n"
+
+
+def test_score_bundle_with_a_stack_scores_the_blend_and_keeps_the_transformer(
+    tmp_path: Path,
+) -> None:
+    """The bundle's final model must be submission.build over the same bases it reports."""
+    from ehrforecast.submission import build
+
+    root, fold, cfg = _project(tmp_path)
+    inputs = _val_inputs(fold)
+    labels = fold.data.labels.loc[fold.held]
+    fm = load_fold_model(root / "models" / "transformer" / cfg["name"] / "fold0" / "S")
+    rng = np.random.default_rng(5)
+    lightgbm = pd.DataFrame(
+        rng.random((len(labels), len(TARGETS))), index=labels.index, columns=TARGETS
+    )
+    weights = {t: {"a": 1.5, "b": -0.2, "fitted": 1.0} for t in TARGETS}
+    (root / "platt.json").write_text(json.dumps(weights))
+    stack = {
+        "bases": ["transformer", "lightgbm_counts"],
+        "stacker": "logit_mean",
+        "platt_weights": "platt.json",
+    }
+    summary, final, per_target, transformer = score_bundle(
+        inputs,
+        labels,
+        [fm],
+        {"lightgbm_counts": lightgbm},
+        None,
+        clock_year=2015,
+        n_boot=20,
+        seed=0,
+        device=CPU,
+        stack=stack,
+        root=root,
+    )
+    pd.testing.assert_frame_equal(transformer, predict_inputs([fm], inputs, CPU))
+    expected = build(
+        stack,
+        {"transformer": transformer, "lightgbm_counts": lightgbm},
+        inputs.prior,
+        TARGETS,
+        root,
+    )
+    pd.testing.assert_frame_equal(final, expected)
+    assert summary["submission"].startswith("logit_mean") and "Platt" in summary["submission"]
+    assert set(summary["comparison_models"]) == {"transformer", "lightgbm_counts"}
+    assert {"final_minus_transformer", "final_minus_lightgbm_counts"} <= set(summary["paired_bca"])
+    assert set(per_target["model"]) == {"final", "transformer", "lightgbm_counts"}
+    with pytest.raises(ValueError, match="root"):
+        score_bundle(
+            inputs,
+            labels,
+            [fm],
+            {"lightgbm_counts": lightgbm},
+            None,
+            clock_year=2015,
+            n_boot=20,
+            seed=0,
+            device=CPU,
+            stack=stack,
+        )
+
+
+def test_frozen_inputs_hash_the_lightgbm_files_and_the_stack_inputs(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "reports" / "lgbm").mkdir(parents=True)
+    (root / "models" / "lgbm" / "counts").mkdir(parents=True)
+    (root / "reports" / "lgbm" / "val_predictions_lightgbm_counts.csv").write_text("x")
+    (root / "models" / "lgbm" / "counts" / "feature_spec.json").write_text("{}")
+    (root / "models" / "lgbm" / "counts" / "1.txt").write_text("tree")
+    (root / "platt.json").write_text("{}")
+    (root / "oof.parquet").write_bytes(b"p")
+    (root / "codes.csv").write_text("c")
+    final = {
+        "comparisons": {
+            "logreg_codes": "codes.csv",
+            "lightgbm_dir": "reports/lgbm",
+            "lightgbm_models": "models/lgbm",
+        },
+        "stack": {"platt_weights": "platt.json", "oof_source": "oof.parquet"},
+    }
+    hashes = val_score.frozen_inputs(root, final)
+    assert set(hashes) == {
+        "codes.csv",
+        "reports/lgbm/val_predictions_lightgbm_counts.csv",
+        "models/lgbm/counts/1.txt",
+        "models/lgbm/counts/feature_spec.json",
+        "platt.json",
+        "oof.parquet",
+    }
+    with pytest.raises(ValueError, match="lightgbm-final"):
+        val_score.frozen_inputs(root, {"comparisons": {"lightgbm_dir": "reports/none"}})
