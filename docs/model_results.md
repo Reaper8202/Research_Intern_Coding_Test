@@ -29,8 +29,8 @@ Frozen artifacts: `reports/final/manifest.json`, `configs/final.toml`, `models/l
 
 Five folds of the 2,791 training patients. All model choices were made here. Held-out fold
 labels chose each run's best epoch and each round's configuration, so these scores carry
-selection effects (model plan section 5.1): 24 transformer configurations and 3 stackers were
-scored on the same folds.
+selection effects (model plan section 5.1): 28 transformer configurations (`models/transformer/`,
+counting seeds and pretraining parents) and 3 stackers were scored on the same folds.
 
 | Stage | Mean fold AUROC | Mean fold mAP | Source |
 |---|---|---|---|
@@ -53,12 +53,14 @@ nested-fold stacking of round 3 (`reports/stacking/clean/`):
 | **Blend, mean of logits (submitted)** | **0.774** | **0.212** | **0.780** | **0.236** |
 | Blend, per-target logistic stacker | 0.769 | 0.216 | 0.781 | 0.244 |
 
-Paired patient BCa 95%, pooled out of fold: blend minus T, AUROC +0.014 [+0.009, +0.019] and mAP
-+0.032 [+0.024, +0.038]; blend minus L1, AUROC +0.011 [+0.007, +0.014] and mAP +0.024
-[+0.019, +0.031]. Platt scaling (`reports/calibration/stack/`): macro Brier 0.0366 to 0.0365,
+Paired patient BCa 95% (1,000 resamples), pooled out of fold: blend minus T, AUROC +0.014
+[+0.009, +0.019] and mAP +0.032 [+0.025, +0.040]; blend minus L1, AUROC +0.011 [+0.007, +0.014]
+and mAP +0.024 [+0.018, +0.031]. Platt scaling (`reports/calibration/stack/`): macro Brier 0.0366 to 0.0365,
 macro expected calibration error 0.013 to 0.010, lower Brier on 4 of 5 folds, per-fold AUROC
 unchanged. Pooled values are lower than mean fold values because pooling mixes the folds'
-probability scales.
+probability scales. The blend rows are before Platt scaling; after the per-fold maps the pooled
+OOF scores are 0.767 AUROC and 0.206 mAP while no per-fold score changes
+(`reports/calibration/stack/calibration.json`).
 
 ## 3. Official validation (two runs, both recorded)
 
@@ -67,15 +69,21 @@ probability scales.
 `168b78f5b5d8`, 20:46 the same day) is under `reports/val/attempts/`. Attempt 1 scored the
 transformer ensemble alone before the blend existed. Its numbers were known when round 3 was
 written; round 3 used training CV only, and the bundle refuses a run without a documented reason.
+Attempt 1 had shown LightGBM ahead on val mAP, and round 3 added LightGBM to the submission, so
+attempt 2 is a second look at the same patients rather than an independent check. Before the
+bundle existed, the step-2 baselines had scored val once (28 and 29 October,
+`reports/baseline/metrics.json`): three reads of the val labels in all. The comparison models'
+own intervals below were computed after the bundle from its saved prediction files
+(`reports/val/post_hoc_single_model_intervals.json`).
 
 | Model | Macro AUROC | mAP | Brier | At-risk AUROC |
 |---|---|---|---|---|
 | **Blend (submitted), attempt 2** | **0.767** [0.746, 0.788] | **0.258** [0.234, 0.268] | 0.0365 | 0.739 |
 | Transformer ensemble (attempts 1 and 2, identical) | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] | 0.0381 | 0.722 |
-| LightGBM counts | 0.762 | 0.239 | 0.0370 | 0.733 |
-| LightGBM counts + latest values | 0.758 | 0.257 | 0.0367 | 0.729 |
-| Logistic regression, code counts + age and sex | 0.764 | 0.222 | 0.0384 | 0.733 |
-| Age-sex incidence, at-risk patients | 0.727 | 0.141 | 0.0390 | 0.696 |
+| LightGBM counts | 0.762 [0.740, 0.781] | 0.239 [0.209, 0.249] | 0.0370 | 0.733 |
+| LightGBM counts + latest values | 0.758 [0.740, 0.780] | 0.257 [0.228, 0.267] | 0.0367 | 0.729 |
+| Logistic regression, code counts + age and sex | 0.764 [0.742, 0.782] | 0.222 [0.195, 0.229] | 0.0384 | 0.733 |
+| Age-sex incidence, at-risk patients | 0.727 [0.705, 0.751] | 0.141 [0.125, 0.146] | 0.0390 | 0.696 |
 
 Paired differences, blend minus comparison (same patients, same resamples):
 
@@ -105,7 +113,8 @@ have it; the "already has it" information is worth about 0.03 AUROC to every mod
 The blend is above the transformer on 29 of 40 targets and above LightGBM counts on 17. Most val
 targets have 5 to 20 positives, so single-target differences are noisy.
 
-* **Near-certain for every model** (AUROC above 0.95): prostate neoplasm, carcinoma in situ and
+* **Near-certain** (AUROC above 0.95 for the blend; six of the seven for the transformer and
+  LightGBM counts too): prostate neoplasm, carcinoma in situ and
   metastasis of the prostate, normal pregnancy, pneumonia, obesity, and the pregnancy
   complication code. Each follows a visible Synthea pathway (PSA tests, contraceptives,
   dementia care plans, BMI observations) that any history model reads.
@@ -119,7 +128,8 @@ targets have 5 to 20 positives, so single-target differences are noisy.
   abnormal gait (blend 0.892, LightGBM 0.832; the two labels are identical for every patient),
   heart failure (0.753 against 0.707), and stroke (0.806 against 0.783).
 * **Still below LightGBM**: the three lung-cancer codes (0.81 to 0.82 against 0.83 to 0.85).
-* **Near chance for every model** (below 0.6): whiplash, lacerations of forearm and foot, sprains
+* **Near chance** (below 0.6 for the blend; seven of the nine for the transformer and LightGBM
+  counts, five for all six models scored): whiplash, lacerations of forearm and foot, sprains
   of wrist and ankle, streptococcal sore throat, clavicle fracture, sinusitis, and wrist
   fracture-subluxation. These are acute events that Synthea generates with little dependence on
   the prior record.
@@ -143,13 +153,18 @@ have raised the mean member AUROC by 0.008; that selection was not made.
   bundle that records each attempt.
 * Self-pretraining helps: F beat S on every fold in both the CSV-only and the multimodal model.
 * The modalities add nothing measurable, and their file presence correlates with outcomes in the
-  dataset (disclosed).
+  dataset: genotype files exist for 14.2% of train patients but 0.6% of val and test, and patients
+  with a genotype or imaging file have more positive labels (2.11 and 2.35 against 1.83 per
+  patient; `reports/dataset/modality_presence.json`). Disclosed; the tokens stay in.
 * A 2-layer transformer on 2,791 synthetic patients ranks patients about as well as a
   gradient-boosted model on code counts and worse at the top of the ranking; a larger body (4 x
-  192) overfits faster. The two models fail on different targets, so a fixed blend beats both.
+  192) overfits faster. The two models fail on different targets, so a fixed blend beats both. The LightGBM setting
+  sits on the edge of its grid on all three axes (4 leaves, 100 trees, minimum child size 20;
+  `grid_edge` in `reports/lightgbm_clean/cv_summary.json`) and the grid was not extended.
 * Removing the clock codes cost about 0.014 AUROC in the transformer and 0.005 in the blend in
   CV, and probably costs test score too; the model should not learn how the anchor was built.
-* A macro AUROC of 0.80 is out of reach here: nine targets are near chance for every model, and
+* A macro AUROC of 0.80 is out of reach here: nine targets are near chance for the blend (five
+  for every model scored), and
   an oracle choice per target reaches 0.778 in CV.
 
 ## 5. Reproduction
@@ -160,7 +175,7 @@ make dataset && make modalities && make folds && make tokenize CONFIG=configs/v2
 # training (about 20 minutes per fold and seed on an M-series Mac):
 for f in 0 1 2 3 4; do make pretrain CONFIG=configs/experiments/v2_ptw_pre.toml FOLD=$f; \
   make finetune CONFIG=configs/experiments/v2_c1.toml FOLD=$f METHOD=F; done   # and the two seeds
-make lightgbm && make stacking && make calibration && make lightgbm-final
+make lightgbm && make lightgbm-clean && make stacking && make calibration && make lightgbm-final
 make freeze && make val-score && make predict && make submission && make package
 ```
 

@@ -1,0 +1,25 @@
+Common codes (>=100 patients) whose records start late; sorted by 5th-percentile year:
+                      rows   pts  first      p05  last
+k                                                     
+observations:DALY     8587  1723   2011  2011.00  2016
+immunizations:114      192   192   2011  2011.00  2016
+immunizations:121      188   115   2006  2011.00  2016
+observations:QOLS     8587  1723   2011  2011.00  2016
+observations:QALY     8587  1723   2011  2011.00  2016
+immunizations:52       177   119   1996  2010.80  2016
+medications:310436     223   146   2002  2003.00  2016
+medications:309362    7451   310   1997  1998.00  2016
+procedures:180325003  3168   257   1972  1997.00  2016
+medications:904419     221   221   1995  1996.00  2016
+procedures:18286008    846   191   1974  1995.25  2016
+medications:197361    8366   228   1994  1995.00  2016
+encounters:308335008   915   254   1959  1994.00  2016
+immunizations:113      948   948   1991  1993.00  2016
+description columns: ['source', 'code', 'description']
+era AUROC fold0 with DALY/QALY/QOLS present: 0.999 | top: [('count:observations:DALY', 0.55), ('count:observations:QALY', 0.19), ('recent:observations:DALY', 0.11), ('count:observations:QOLS', 0.06)]
+era AUROC fold0, removed 0 more: 0.876 | top: [('age_years', 0.12), ('recent:observations:72106-8', 0.09), ('count:immunizations:114', 0.08), ('count:observations:2857-1', 0.07)]
+era AUROC fold0, removed 4 more: 0.864 | top: [('count:observations:72106-8', 0.13), ('count:observations:32465-7', 0.07), ('count:immunizations:113', 0.06), ('count:medications:1049221', 0.06)]
+era AUROC fold0, removed 8 more: 0.841 | top: [('count:careplans:386257007', 0.08), ('count:procedures:410006001', 0.06), ('count:conditions:26929004', 0.06), ('count:immunizations:121', 0.05)]
+era AUROC fold0, removed 12 more: 0.828 | top: [('recent:observations:2857-1', 0.07), ('recent:encounters:316744009', 0.06), ('count:procedures:73761001', 0.06), ('count:encounters:316744009', 0.06)]
+era AUROC fold0, removed 16 more: 0.810 | top: [('recent:observations:32465-7', 0.09), ('age_band_65_80', 0.07), ('recent:careplans:386257007', 0.07), ('count:immunizations:133', 0.06)]
+era AUROC fold0, removed 20 more: 0.799 | top: [('recent:procedures:410006001', 0.13), ('recent:conditions:26929004', 0.09), ('count:medications:904419', 0.06), ('count:encounters:698314001', 0.05)]

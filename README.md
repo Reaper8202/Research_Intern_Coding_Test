@@ -4,19 +4,23 @@ Predicts which of 40 conditions a patient will be diagnosed with for the first t
 years after a landmark ("anchor") date, using only the synthetic EHR events recorded before that
 date. Data: the Synthea Coherent dataset as released for the research intern coding test.
 
-Status: steps 1 to 5 are done except publishing. The submission is the round-3 blend (D38). The CSV-only transformer (`small-v1`) is trained on all five
-training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
-multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
-MRI token from a 3-D CNN. A pre-registered tuning round (D35, `configs/budget.toml`) selected
-fine-tuning dropout 0.3 (`small-v1-mm-do03`). Round 2 (D36, `configs/budget_v2.toml`) removed three
-simulator clock codes and selected `small-v2-c1`: a pooled readout, extra supervised anchors, and
-target-weighted pretraining, averaged over three seeds. In training CV on the same clean inputs, its
-AUROC gap to LightGBM counts is -0.003 [-0.010, +0.005]. LightGBM stays ahead on mAP against its value
-features. See [the project plan](docs/plan.md) and [model plan version 2.5](docs/model_plan.md).
+Status: steps 1 to 5 are done; publishing waits for the author (`docs/submission_checklist.md`).
+The submitted model is the round-3 blend (decision D38): the mean of logits of a 15-model
+transformer ensemble (`small-v2-c1`, three seeds x five folds: a 2-layer, width-128 decoder-only
+transformer with continuous age features, self-pretrained on pre-anchor events, then fine-tuned)
+and two LightGBM models on code counts and counts plus latest values, followed by per-target Platt
+scaling. The transformer path went through a method comparison (S/H/F; F selected), a
+multimodal test (D34: genotype tokens and one brain-MRI token, no measurable gain, kept), and
+three pre-registered tuning rounds (D35, D36, D38; `configs/budget*.toml`). Round 2 removed three
+simulator clock codes (DALY, QALY, QOLS) that encode the anchor year. On official val (attempt 2
+of 2, both recorded) the blend scores 0.767 macro AUROC [0.746, 0.788] and 0.258 mAP; the
+transformer alone 0.751 and LightGBM counts alone 0.762. See [the project plan](docs/plan.md),
+[the model plan](docs/model_plan.md), [the results](docs/model_results.md), and [the final
+audit](reports/audit/final_audit.md).
 
-The final model is a transformer trained from random weights on the supplied training data. Any
-self-pretraining uses only training histories before their anchors. External datasets and
-pretrained weights are excluded. Logistic regression and LightGBM are comparison methods.
+Every model is trained from random weights on the supplied training split. Self-pretraining uses
+only training histories before their anchors. External datasets and pretrained weights are
+excluded. Logistic regression and the incidence table are step-2 comparison methods.
 
 The assessment demonstrates a correct, leak-free, reproducible training pipeline. The plan starts
 with a small transformer and a complete run through training, checkpoint recovery, reload, and
@@ -104,6 +108,7 @@ Tuning round and comparison baselines (training CV only; official val is never r
 make experiments                  # configs/budget.toml in order; resumable
 make experiments-summary          # reports/transformer/experiments.csv (section 5.3 rule)
 make lightgbm                     # E11 LightGBM baselines -> reports/lightgbm/
+make lightgbm-clean               # D36: the same without the clock codes -> reports/lightgbm_clean/ (make stacking needs it)
 ```
 
 Round 2 and the candidate's predictions (D36):
@@ -186,22 +191,38 @@ removes everything that these commands generate, except the committed reports.
 
 Official val (365 patients, 685 positive labels), scored by the frozen bundle. Two attempts, both
 recorded: attempt 1 (`reports/val/attempts/168b78f5b5d8/`) scored the transformer ensemble alone;
-attempt 2 (`reports/val/`) scored the round-3 blend after it was adopted on training CV. All
-models use the common prior-condition mask; intervals are 95% patient BCa bootstrap intervals.
+attempt 2 (`reports/val/`) scored the round-3 blend after it was adopted on training CV. The
+step-2 baselines had scored val once before the bundle existed (28 and 29 October), so the val
+labels were read three times in all. All models use the common prior-condition mask; intervals
+are 95% patient BCa bootstrap intervals (the comparison models' own intervals were computed after
+the bundle from its saved files, `reports/val/post_hoc_single_model_intervals.json`).
 
 | Model | Macro AUROC | mAP | Brier |
 |---|---|---|---|
 | **Submitted blend**: transformer ensemble + LightGBM counts + LightGBM counts and values, mean of logits, Platt-scaled | **0.767** [0.746, 0.788] | **0.258** [0.234, 0.268] | 0.0365 |
 | Transformer ensemble (`small-v2-c1`, 3 seeds x 5 folds) | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] | 0.0381 |
-| LightGBM counts (CV-selected setting, fitted on all of train) | 0.762 | 0.239 | 0.0370 |
-| LightGBM counts + values | 0.758 | 0.257 | 0.0367 |
-| Logistic regression, code counts + age and sex (step 2) | 0.764 | 0.222 | 0.0384 |
-| Age-sex incidence table, at-risk patients only (step 2) | 0.727 | 0.141 | 0.0390 |
+| LightGBM counts (CV-selected setting, fitted on all of train) | 0.762 [0.740, 0.781] | 0.239 [0.209, 0.249] | 0.0370 |
+| LightGBM counts + values | 0.758 [0.740, 0.780] | 0.257 [0.228, 0.267] | 0.0367 |
+| Logistic regression, code counts + age and sex (step 2) | 0.764 [0.742, 0.782] | 0.222 [0.195, 0.229] | 0.0384 |
+| Age-sex incidence table, at-risk patients only (step 2) | 0.727 [0.705, 0.751] | 0.141 [0.125, 0.146] | 0.0390 |
 
 Paired differences, blend minus: transformer ensemble +0.016 AUROC [+0.002, +0.030] and +0.049 mAP
 [+0.033, +0.072]; LightGBM counts +0.005 AUROC [-0.005, +0.016] and +0.019 mAP [+0.002, +0.040].
 Training CV said the same (`docs/decisions.md`, D38). Test labels are hidden; test scores belong
 to the organisers. Per-target and subgroup results: `docs/model_results.md`.
+
+## Data and licence
+
+The dataset is not committed. It is derived from the Coherent Synthetic Data Set generated by
+Synthea (Copyright 2022 The MITRE Corporation, MITRE Public Release Case Number 21-1917) and
+released under the Creative Commons Attribution 4.0 International License. The code in this
+repository and the published model weights are under the MIT licence (`LICENSE`).
+
+## Final audit
+
+`docs/audit_criteria.md` holds 74 criteria written from the task brief and general practice
+before the audit; `reports/audit/final_audit.md` holds every verdict with its evidence, the
+fixes made, and what was left as it was.
 
 ## Package modules
 
@@ -240,6 +261,9 @@ to the organisers. Per-target and subgroup results: `docs/model_results.md`.
 | `predict.py` | label-free prediction from saved fold models |
 | `smoke.py` | G2 end-to-end execution check |
 | `cv_summary.py` | five-fold results, method selection, config comparison |
+| `experiments.py` | run and summarise a pre-registered tuning budget (`configs/budget*.toml`) |
+| `lightgbm_cv.py` | E11 LightGBM comparison baselines on the training folds (own process, no PyTorch) |
+| `full_timeline.py` | the rejected full-timeline pretraining variant (P2, D36); not used by the submission |
 | `stacking.py` | round 3: nested-fold stacking of the transformer ensemble with LightGBM (CV only) |
 | `calibration.py` | round 3: per-target Platt scaling, reliability tables, nested-fold check |
 | `lightgbm_final.py` | final LightGBM models on all training patients; boosters, feature spec, val/test files |

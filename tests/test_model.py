@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from ehrforecast.finetune import predict_samples
-from ehrforecast.model import EHRTransformer, ModelConfig
+from ehrforecast.model import EHRTransformer, ModelConfig, rotary
 from ehrforecast.sequences import Sample
 from ehrforecast.tokenizer import age_features
 from ehrforecast.training import IGNORE, collate, next_token_loss_sum, supervised_loss_sum
@@ -108,3 +108,42 @@ def test_language_model_learns_an_unambiguous_sequence() -> None:
         (loss / count).backward()
         optimizer.step()
     assert float(loss.detach() / count) < 0.05
+
+
+def test_rotary_is_identity_at_position_zero_and_depends_on_relative_shift_only() -> None:
+    torch.manual_seed(1)
+    q = torch.randn(1, 1, 6, 8)
+    rotated = rotary(q, 10000.0)
+    assert torch.allclose(rotated[0, 0, 0], q[0, 0, 0])
+    assert not torch.allclose(rotated[0, 0, 3], q[0, 0, 3])
+    same_q = q[0, 0, 0].repeat(6, 1)[None, None]
+    same_k = torch.randn(8).repeat(6, 1)[None, None]
+    rq, rk = rotary(same_q, 10000.0)[0, 0], rotary(same_k, 10000.0)[0, 0]
+    shift_one = [float(rq[t] @ rk[t + 1]) for t in range(3)]
+    assert max(shift_one) - min(shift_one) < 1e-5
+    assert abs(float(rq[0] @ rk[2]) - shift_one[0]) > 1e-4
+
+
+def test_event_order_changes_the_final_state_at_equal_ages() -> None:
+    model = _model().eval()
+    ages = torch.from_numpy(age_features(np.full((1, 5), 35.0, dtype="float32")))
+    with torch.no_grad():
+        first = model.hidden(torch.tensor([[2, 3, 5, 6, 7]]), ages)
+        swapped = model.hidden(torch.tensor([[2, 3, 6, 5, 7]]), ages)
+    assert not torch.allclose(first[0, -1], swapped[0, -1], atol=1e-6)
+
+
+def test_output_shape_is_batch_by_targets() -> None:
+    model = _model().eval()
+    samples = [_sample([2, 3, 4, 5]), _sample([2, 3, 6]), _sample([2, 3, 7, 8, 9, 10])]
+    batch = collate(samples, torch.device("cpu"))
+    with torch.no_grad():
+        out = model(
+            batch["tokens"],
+            batch["ages"],
+            batch["readout"],
+            batch["head"],
+            None,
+            batch["event_mask"],
+        )
+    assert tuple(out.shape) == (3, 3)

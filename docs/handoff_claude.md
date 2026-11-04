@@ -9,7 +9,7 @@ original handoff.
 
 ## Goal and rules
 
-Repository: `/Users/derek/Downloads/research_intern_coding_test/ehr-forecast`.
+Repository: the `ehr-forecast` folder next to the dataset folder (this repository).
 
 Read `docs/model_plan.md` version 2.2 and `docs/plan.md`. The assessment authority is
 `../research_intern_coding_test/ReadMe.md`, relative to the repository root.

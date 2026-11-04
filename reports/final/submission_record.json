@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-11-03T23:50:17-0500",
+  "commit": "812393ed3135ed1e977f40e872da535c44c14b3c",
+  "tracked_changes": "M Makefile\n M README.md\n M data/README.md\n M docs/ai_workflow.md\n M docs/decisions.md\n M docs/handoff_claude.md\n M docs/model_card.md\n M docs/model_results.md\n M docs/report.md\n M docs/report.pdf\n M reports/stacking/clean/stacking.json\n M scripts/checks/clock_scan.py\n M src/ehrforecast/hf_package.py\n M tests/test_audit_boundaries.py\n M tests/test_model.py",
+  "files": {
+    "predictions.csv": {
+      "sha256": "12d17a321febcac3e51d19274b91cb3155c3f9e914a51c55e18c94d19e0e97b3",
+      "bytes": 287482
+    },
+    "docs/report.pdf": {
+      "sha256": "ca37421b9059ea79176636b5009aff7989a5ac23e540b5f7a3131b09259f5ef9",
+      "bytes": 473853
+    },
+    "reports/final/manifest.json": {
+      "sha256": "f017b91404558afd5cfee371cb531636fda0cf4a7e15e810d20fe39b45f251de",
+      "bytes": 67572
+    },
+    "models/hf/package.json": {
+      "sha256": "4fa2fc928c25f04b71b81a09957b41488528fedd875f705d731f772e10ea66a5",
+      "bytes": 19739
+    },
+    "requirements-lock.txt": {
+      "sha256": "63d777ebdb77d42aff2d0e24534be87cf35a28a1df2edeac0dfd2d43378c6bef",
+      "bytes": 1312
+    }
+  }
+}

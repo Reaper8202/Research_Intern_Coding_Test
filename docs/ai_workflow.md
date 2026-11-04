@@ -41,7 +41,7 @@ Decisions I made myself, with the AI presenting the evidence:
 
 * **Plan before code.** `docs/model_plan.md` was written and revised before the matching code.
   Each revision is dated and states whether any result was known when it was made.
-* **Tests as the review.** 193 unit tests, including mutation-style checks: changing `<` to
+* **Tests as the review.** 199 tests (184 test functions), including mutation-style checks: changing `<` to
   `<=` in the anchor-day rule fails a test; a future record added after the anchor must leave
   every prediction unchanged; a resumed run must match an uninterrupted one.
 * **Pre-registered selection.** The adoption rule (mean AUROC gain of at least 0.005, higher on at

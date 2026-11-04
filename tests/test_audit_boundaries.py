@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
+import ehrforecast
 from ehrforecast.contracts import prediction_cohort, prediction_events
 from ehrforecast.events import EVENT_COLUMNS
 from ehrforecast.lightgbm_cv import MIN_VALUE_PATIENTS, all_values, latest_values, value_features
@@ -168,3 +170,22 @@ def test_landmark_windows_end_before_the_real_anchor_and_see_only_earlier_days()
             assert np.array_equal(sample.tokens[sample.n_prefix :], visible[-sample.n_events :])
             checked += 1
     assert checked > 0
+
+
+# Modules allowed to name the label file. ``contracts`` and ``val_score`` filter by patient at
+# read time; ``train_baseline`` is the step-2 script that scored val on 28 and 29 October 2026
+# (D6, D37) and is not on the submission path; ``build_dataset`` writes the file and
+# ``preflight`` hashes it without reading rows.
+LABEL_FILE_MODULES = {
+    "build_dataset.py",
+    "contracts.py",
+    "preflight.py",
+    "train_baseline.py",
+    "val_score.py",
+}
+
+
+def test_only_the_documented_modules_name_the_label_file() -> None:
+    package = Path(ehrforecast.__file__).parent
+    readers = {p.name for p in package.glob("*.py") if "labels.parquet" in p.read_text()}
+    assert readers == LABEL_FILE_MODULES

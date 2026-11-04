@@ -22,8 +22,8 @@ MANIFEST ?= $(REPORTS_DIR)/final/manifest.json
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
 	modalities tokenize pipeline-smoke pretrain finetune cv-summary experiments \
-	experiments-summary lightgbm stacking calibration lightgbm-final freeze val-score \
-	predict submission package wandb-sync clean
+	experiments-summary lightgbm lightgbm-clean stacking calibration lightgbm-final freeze \
+	val-score predict submission package submission-record wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -118,6 +118,13 @@ lightgbm:
 		--reports $(REPORTS_DIR)/lightgbm --compare-config configs/multimodal.toml \
 		--log-file $(LOGS_DIR)/lightgbm.log
 
+# D36: the same LightGBM baselines without the simulator clock codes DALY, QALY, and QOLS. This is
+# the comparison setting the round-3 stack, the calibration, and the final boosters use.
+lightgbm-clean:
+	$(PYTHON) -m ehrforecast.lightgbm_cv --dataset $(PROCESSED_DIR) --models $(MODELS_DIR) \
+		--reports $(REPORTS_DIR)/lightgbm_clean --output-name lightgbm_clean \
+		--exclude-observations DALY QALY QOLS --log-file $(LOGS_DIR)/lightgbm_clean.log
+
 # Tuning round from configs/budget.toml (resumable), then the experiment register.
 experiments:
 	$(PYTHON) -m ehrforecast.experiments run --budget configs/budget.toml \
@@ -189,6 +196,10 @@ package:
 	$(PYTHON) -m ehrforecast.hf_package verify --package $(MODELS_DIR)/hf \
 		--dataset $(PROCESSED_DIR) --predictions predictions.csv --device $(DEVICE) \
 		--out $(REPORTS_DIR)/final/package_verify_cpu.json
+
+# Hashes of the files that leave the repository, with the commit (run after the final PDF).
+submission-record:
+	$(PYTHON) scripts/submission_record.py --out $(REPORTS_DIR)/final/submission_record.json
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
 wandb-sync:

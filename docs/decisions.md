@@ -1,7 +1,9 @@
 # Decisions and evidence
 
 Each entry states the decision, the reason, and the check that supports it. Numbers come from the
-released data (train+val 3,156 patients, test 358).
+released data (train+val 3,156 patients, test 358). Entry dates, from the first commit of each
+entry: D1 to D7 on 28 October 2026, D8 on 29 October, D31 and D32 on 31 October, D33 to D35 on
+1 November, D36 to D38 on 3 November 2026; the final-audit corrections of 4 November are marked.
 
 ## D1. Anchor date and history cut-off
 
@@ -304,14 +306,15 @@ histories only. The author reviews this choice before P4e.
 
 **Why the three codes leave.** DALY, QALY, and QOLS are simulator scores recorded yearly from 2011
 to 2021, so their counts work as a calendar clock. They predict an anchor before 2015 with AUROC
-0.999 (`scripts/checks/clock_scan.py`). Of those 1,219 training patients, 1,155 died, and they have
+0.999 (`scripts/checks/clock_scan.py`, output committed as `reports/dataset/clock_scan.txt` on
+4 November). Of those 1,219 training patients, 1,155 died, and they have
 more new diagnoses (2.37 against 1.48 per patient). All these rows are before the anchor, so this
 is not a future leak. The problem is validity: the model reads how the anchor was built, not a
 clinical state. Removal costs score: A1 trails the D35 model by 0.0143 AUROC and 0.0153 mAP, and
 LightGBM counts falls from 0.773 to 0.764 pooled AUROC. The test files contain the codes too (1,081
 DALY rows), so removal can lower the hidden score. An era signal remains in clinical codes and age
-(AUROC 0.865). It is kept, because it cannot be removed without removing clinical history, and it
-is reported below.
+(AUROC 0.865 in the D36 run; 0.876 in the committed rerun, LightGBM on fold 0). It is kept,
+because it cannot be removed without removing clinical history, and it is reported below.
 
 **Round.** `configs/budget_v2.toml`. Each block was committed before its scores (15d569d, 6791ab2,
 ed19115, bce43e9, 02e8074, dedc88e). Rule: section 5.3, against A1 unless stated. Training CV only;
@@ -396,6 +399,10 @@ folds each, method F, each fold's best epoch, probabilities averaged over the 15
 prior-condition cells set to 0. The val score below did not change this choice and could not: the
 bundle refuses a second run without a documented reason, and none exists.
 
+**Val reads before this bundle.** The step-2 baselines (D6) scored official val on 28 and 29
+October (`reports/baseline/metrics.json`), before the bundle protocol existed; with the two bundle
+attempts, the val labels have been read three times in all.
+
 **Procedure.** `make freeze` (commit 8e8725e) recorded the hash of every checkpoint, epoch
 checkpoint, tokenizer, dataset manifest, source file, the lock file, and the step-2 comparison
 files in `reports/final/manifest.json`. `make val-score` verified them, checked the tracked tree
@@ -449,14 +456,24 @@ epoch was chosen on each member's held-out training fold and was not changed.
 per-target Platt scaling: the D36 transformer ensemble (15 fold models), LightGBM on code counts,
 and LightGBM on counts plus latest values, the last two fitted on all training patients with the
 settings training CV selected in E11. The rules that chose this were written in
-`configs/budget_v3.toml` (commit e93c4d7) before any of the numbers below existed. Derek asked on
+`configs/budget_v3.toml` (commit e93c4d7, 21:18:44 on 3 November). **Correction from the final
+audit (4 November).** The stacking job that produced the numbers below was already running when
+that commit was made: `reports/stacking/clean/per_target.csv` and `weights_logistic.json` were
+written at 21:04:56, two of the three out-of-fold files by 21:14:34, and `stacking.json` at
+21:19:52; the job prints pooled stacker scores as it goes. Rules S and C therefore cannot be shown
+to have been fixed before any point estimate was visible, and the budget header's "21:40" is
+wrong (the budget file is left as committed). The architecture screen A1 started at 21:19:54, after
+the commit, so rules A1 and A2 are pre-registered in the strict sense. The rules were not changed
+afterwards, and the adopted blend passes rule S by margins well outside its intervals. Derek asked on
 3 November for the strongest leak-free submission; the task brief recommends a sequence model
 but says the modeling approach is the candidate's choice. The transformer remains the part of
 the system this project built and studied; the blend is reported as a blend.
 
 **Rule S, stacking (`reports/stacking/clean/`, nested five-fold, official val not read).** Base
 models are out-of-fold predictions; the stacker applied to a fold is fitted (where it has
-parameters) on the other four folds.
+parameters) on the other four folds. The intervals in this entry were first computed with 200
+bootstrap resamples; the final audit re-ran `make stacking` with the default 1,000 (the
+out-of-fold files were byte-identical) and the intervals below are from that run.
 
 | Model | Pooled OOF AUROC | Pooled OOF mAP | Mean fold AUROC | Mean fold mAP |
 |---|---|---|---|---|
@@ -468,9 +485,9 @@ parameters) on the other four folds.
 | **Stack, mean of logits (adopted)** | **0.7744** | **0.2124** | **0.7798** | **0.2364** |
 | Stack, per-target logistic regression on logits | 0.7688 | 0.2160 | 0.7808 | 0.2444 |
 
-Paired patient BCa 95%, pooled out of fold, mean of logits minus: T, AUROC +0.0137
-[+0.0093, +0.0193] and mAP +0.0315 [+0.0238, +0.0382]; L1, AUROC +0.0108 [+0.0067, +0.0143] and
-mAP +0.0241 [+0.0192, +0.0311]; L2, AUROC +0.0134 [+0.0090, +0.0185]. The rule's three
+Paired patient BCa 95%, pooled out of fold, mean of logits minus: T, AUROC +0.0137 [+0.0089, +0.0194]
+and mAP +0.0315 [+0.0253, +0.0396]; L1, AUROC +0.0108 [+0.0068, +0.0144] and
+mAP +0.0241 [+0.0183, +0.0307]; L2, AUROC +0.0134 [+0.0092, +0.0179]. The rule's three
 conditions hold (interval above zero against T, mAP gain at least zero, AUROC at least L1's), so
 the stack replaces T. The logistic stacker exceeds the mean of logits by 0.0010 mean fold AUROC,
 below the 0.003 margin, so the parameter-free blend is kept and rule A2 (LightGBM probabilities

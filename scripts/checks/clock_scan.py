@@ -18,6 +18,9 @@ d = pd.read_parquet(ds/"code_descriptions.parquet"); print("description columns:
 early = co.loc[idx,"anchor_date"].dt.year<2015; A = load_folds(ds); fit, held = fold_patients(A,0)
 b = BagOfCodes().fit(ev,co.loc[fit]); xf,xh = b.transform(ev,co.loc[fit]), b.transform(ev,co.loc[held])
 drop=("DALY","QALY","QOLS"); removed=[]
+m0=lightgbm.LGBMClassifier(n_estimators=100,num_leaves=4,min_child_samples=50,importance_type="gain",**FIXED).fit(xf.to_numpy("float32"),early.loc[fit].astype(int))
+imp0=pd.Series(m0.feature_importances_,index=xf.columns).sort_values(ascending=False); imp0=imp0/imp0.sum()
+print(f"era AUROC fold0 with DALY/QALY/QOLS present: {roc_auc_score(early.loc[held],m0.predict_proba(xh.to_numpy('float32'))[:,1]):.3f} | top: {[(c,round(float(v),2)) for c,v in imp0.head(4).items()]}")
 for round_ in range(6):
     keep=[c for c in xf.columns if not any(c.endswith(":"+k) for k in drop) and c not in removed]
     m=lightgbm.LGBMClassifier(n_estimators=100,num_leaves=4,min_child_samples=50,importance_type="gain",**FIXED).fit(xf[keep].to_numpy("float32"),early.loc[fit].astype(int))

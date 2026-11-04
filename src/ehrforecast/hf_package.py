@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import platform
 import shutil
 import subprocess
 import sys
@@ -241,6 +242,17 @@ def package_predictions(
     return build_submission(package["stack"], bases, inputs.prior, inputs.codes, package_dir)
 
 
+def environment_provenance() -> dict[str, Any]:
+    """Interpreter, platform, prefix, and lock-file hash, so a record names its environment."""
+    lock = Path("requirements-lock.txt")
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "prefix": sys.prefix,
+        "lock_sha256": file_hash(lock) if lock.is_file() else None,
+    }
+
+
 def compare_predictions(ours: pd.DataFrame, submitted: pd.DataFrame) -> dict[str, Any]:
     submitted = submitted.reindex(index=ours.index, columns=ours.columns)
     if submitted.isna().any().any():
@@ -307,6 +319,7 @@ def main(argv: list[str] | None = None) -> None:
         "package": str(args.package),
         "device": args.device,
         "torch": torch.__version__,
+        **environment_provenance(),
         "submission": package.get("stack") or "transformer ensemble",
         "n_patients": len(ours),
         "n_targets": ours.shape[1],

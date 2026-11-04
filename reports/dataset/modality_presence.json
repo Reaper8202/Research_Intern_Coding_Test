@@ -1,0 +1,139 @@
+{
+  "scope": "file presence only; no file content is read; labels are train and val",
+  "has_genomics": {
+    "by_split": {
+      "test": {
+        "n": 358,
+        "present": 2,
+        "fraction": 0.0056
+      },
+      "train": {
+        "n": 2791,
+        "present": 396,
+        "fraction": 0.1419
+      },
+      "val": {
+        "n": 365,
+        "present": 2,
+        "fraction": 0.0055
+      }
+    },
+    "chi2_split_vs_presence_p": 1.0408329057684345e-23,
+    "labelled_positives_per_patient": {
+      "present": 2.108,
+      "absent": 1.835,
+      "mannwhitney_p": 0.0002480081221591194
+    },
+    "labelled_age_at_anchor_mean": {
+      "present": 75.4,
+      "absent": 59.0
+    },
+    "train_targets_most_associated": [
+      {
+        "code": "230690007",
+        "prevalence_present": 0.2273,
+        "prevalence_absent": 0.0484,
+        "fisher_p": 2.9211687939604175e-27
+      },
+      {
+        "code": "22298006",
+        "prevalence_present": 0.1237,
+        "prevalence_absent": 0.0434,
+        "fisher_p": 6.0870348815476525e-09
+      },
+      {
+        "code": "443165006",
+        "prevalence_present": 0.0758,
+        "prevalence_absent": 0.0267,
+        "fisher_p": 6.883872665567296e-06
+      },
+      {
+        "code": "271737000",
+        "prevalence_present": 0.0051,
+        "prevalence_absent": 0.0455,
+        "fisher_p": 1.0186993575739357e-05
+      },
+      {
+        "code": "162864005",
+        "prevalence_present": 0.0,
+        "prevalence_absent": 0.0251,
+        "fisher_p": 0.00021232749773553833
+      },
+      {
+        "code": "22325002",
+        "prevalence_present": 0.0328,
+        "prevalence_absent": 0.0117,
+        "fisher_p": 0.004917618169338639
+      }
+    ],
+    "train_targets_fisher_p_below_0.01": 9
+  },
+  "has_imaging": {
+    "by_split": {
+      "test": {
+        "n": 358,
+        "present": 28,
+        "fraction": 0.0782
+      },
+      "train": {
+        "n": 2791,
+        "present": 235,
+        "fraction": 0.0842
+      },
+      "val": {
+        "n": 365,
+        "present": 30,
+        "fraction": 0.0822
+      }
+    },
+    "chi2_split_vs_presence_p": 0.9248069404126396,
+    "labelled_positives_per_patient": {
+      "present": 2.355,
+      "absent": 1.825,
+      "mannwhitney_p": 1.0120746489618986e-05
+    },
+    "labelled_age_at_anchor_mean": {
+      "present": 80.9,
+      "absent": 59.3
+    },
+    "train_targets_most_associated": [
+      {
+        "code": "22325002",
+        "prevalence_present": 0.1447,
+        "prevalence_absent": 0.0027,
+        "fisher_p": 3.859872923767055e-31
+      },
+      {
+        "code": "723857007",
+        "prevalence_present": 0.1447,
+        "prevalence_absent": 0.0027,
+        "fisher_p": 3.859872923767055e-31
+      },
+      {
+        "code": "233604007",
+        "prevalence_present": 0.1404,
+        "prevalence_absent": 0.0391,
+        "fisher_p": 4.065046451021893e-09
+      },
+      {
+        "code": "230690007",
+        "prevalence_present": 0.1702,
+        "prevalence_absent": 0.0649,
+        "fisher_p": 1.5949766924926314e-07
+      },
+      {
+        "code": "26929004",
+        "prevalence_present": 0.0851,
+        "prevalence_absent": 0.0215,
+        "fisher_p": 1.7328006381442505e-06
+      },
+      {
+        "code": "443165006",
+        "prevalence_present": 0.0766,
+        "prevalence_absent": 0.0297,
+        "fisher_p": 0.000845802805709628
+      }
+    ],
+    "train_targets_fisher_p_below_0.01": 9
+  }
+}

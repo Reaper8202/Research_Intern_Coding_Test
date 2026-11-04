@@ -37,8 +37,10 @@ nested cross-validation it beat both of its parts with intervals above zero. Mos
 went into the pipeline rather than the models: a truncation rule checked against the released test
 files, column allowlists that keep future-bearing fields out, a prior-condition mask shared by
 every model, five-fold cross-validation on train for every choice, three tuning rounds with
-budgets committed before their scores, an independent audit of every data boundary, and two
-recorded val runs, both disclosed.
+budgets committed before their transformer runs (round 3's stacking rule was committed while
+its stacking job was running; section 2 says so), an independent audit of every data boundary, a
+final 74-criterion audit (`docs/audit_criteria.md`, `reports/audit/`), and official val read
+three times in all, each read recorded.
 
 ## 1. Representation
 
@@ -66,20 +68,24 @@ cost and payer columns, medication dispense counts and total cost (in the releas
 so they leak future refills), and device UDIs (they encode manufacture and expiry dates). Race
 and ethnicity are not used (D15; a LightGBM check showed they cost no measurable score). Three
 observation codes, DALY, QALY, and QOLS, are removed (D36): they are simulator scores recorded
-once a year from 2011, their counts predict an anchor before 2015 with AUROC 0.999, and they tell
+once a year from 2011, their counts predict an anchor before 2015 with AUROC 0.999
+(`reports/dataset/clock_scan.txt`), and they tell
 the model how the anchor was constructed rather than anything clinical. Removing them cost about
 0.014 CV AUROC in the transformer and 0.005 in the final blend, and probably costs test score,
 since the test files contain them.
 
-Genomics and the brain-MRI DICOM volumes are included at my request after an earlier decision to
-leave them out. Coverage is thin: genotype files exist for 396 training and 2 test patients, and a
+Genomics and the brain-MRI DICOM volumes are included as a test of the optional modalities, after
+an earlier decision to leave them out; the test returned a null result and the tokens stay in,
+which is reported as such. Coverage is thin: genotype files exist for 396 training and 2 test patients, and a
 pre-anchor scan for 200 training and 28 test patients. The scan enters as one token only when its
 study date is before the anchor day. Measured in CV they add nothing (+0.0005 AUROC; on the 541
 training patients whose inputs actually change, -0.003 [-0.020, +0.015]). The volumes are
 near-identical simulated brains (block-mean correlation 0.995 to 0.999 between patients). The
 audit (section 3) found that having a genotype file or a scan is itself correlated with outcomes
-in this dataset, so the presence tokens could act as a proxy; the CV result says the model does
-not use them, and only 2 test patients have genotypes.
+in this dataset (genotype files: 14.2% of train patients against 0.6% of val and test, 2.11 against
+1.83 positive labels per patient; `reports/dataset/modality_presence.json`), so the presence tokens
+could act as a proxy; the CV result says the model does not use them, and only 2 test patients
+have genotypes.
 
 **Continuous values.** Each numeric observation is binned into quantiles fitted per code and
 unit on the fold's fit patients only (up to 10 bins, merged where boundaries coincide), and the
@@ -101,7 +107,8 @@ Explicit gap tokens were planned as an experiment and not reached within the bud
 days are kept; conditions first diagnosed before the kept window become `hx:` summary tokens
 (up to 128) at the front, so an old diagnosis is never lost. Under the final tokenizer about 4.6%
 of training patients are truncated, but they are the densest histories: 15 to 18% of all event
-tokens fall outside the window, mostly medication refills and encounters. Exact refills (a stop
+tokens of the fit patients fall outside the window (24.6% on held-out fold 0, whose dense
+histories are longer), mostly medication refills and encounters. Exact refills (a stop
 and a restart of the same drug on the same day; 160,150 of them in fold 0) are merged first.
 Contexts of 512 and 2,048 were screened on fold 0 and did not help.
 
@@ -139,17 +146,19 @@ epochs, patience 3 on fixed held-out windows; every run reached epoch 30 with he
 falling slowly (fold 0: 1.449). Fine-tuning: head lr 0.001, body lr 0.0001, weight decay 0.01,
 gradient clip 1.0, batch 32, dropout 0.3 in the body and head, up to 30 epochs, patience 5 on
 held-out masked macro AUROC; best epochs ranged from 3 to 13. One fold (pretraining plus
-fine-tuning) takes about 20 minutes on a 16 GB M-series Mac; the 15 submitted members took
-about 4.5 hours in all. Everything is float32.
+fine-tuning) takes about 20 minutes on a 16 GB M-series Mac (MPS; the resume-equality test runs on
+CPU); the 15 submitted members took about 4.5 hours in all. Everything is float32. Code defaults
+not in the config: fine-tuning AdamW betas (0.9, 0.999) and a constant fine-tuning learning rate.
 
 **Three training methods were compared** on the same folds before any tuning: S (random
 initialisation, supervised only), H (pretrained body held fixed, head only), and F (pretrained
 body, full fine-tuning). F won on every fold: mean fold AUROC 0.760 against 0.744 (S) and 0.742
 (H); pooled paired difference F minus S +0.020 [+0.013, +0.028]. Self-pretraining helps; a fixed
-body does not carry enough.
+body does not carry enough. The comparison was made on `small-v1` and `small-v1-mm`; S was not
+re-run for the final recipe.
 
-**Tuning, pre-registered.** Three rounds, each written to a budget file and committed before any
-of its scores existed, with a fixed adoption rule: mean AUROC gain at least 0.005, higher on at
+**Tuning, pre-registered.** Three rounds, each written to a budget file and committed before its
+transformer runs started, with a fixed adoption rule: mean AUROC gain at least 0.005, higher on at
 least 4 of 5 folds, mAP loss at most 0.005. Round 1 (11 trials) adopted dropout 0.3; lower body
 learning rate, weight decay 0.1, an age-sex head, 60 pretraining epochs, and contexts 512 and
 2,048 failed. Round 2 (12 trials, after removing the clock codes) adopted the combination of a
@@ -159,7 +168,12 @@ events) passed the rule and was **not** adopted, because the task says to trunca
 Three seeds of the winner were trained and averaged. Round 3 tested the one architecture
 dimension never varied, depth and width: a 4-layer, width-192 model (2.26M parameters) reached a
 slightly lower pretraining loss but scored 0.758 against 0.772 on the fold-0 screen, so the small
-model stayed. The full register with every score is in
+model stayed. One correction from the final audit: round 3's stacking and calibration rules were
+committed at 21:18 on 3 November while the stacking job was already running and had written part
+of its output (its per-target file at 21:04, its summary at 21:19), so those two rules were
+written with point estimates possibly in view; the architecture screen started after the commit.
+The rules were not changed afterwards, and the adopted blend passes them by margins well outside
+the intervals (D38). The full register with every score is in
 `docs/decisions.md` (D35, D36, D38) and `reports/transformer/`.
 
 **Comparison models and the blend.** Alongside the transformer: an age-sex incidence table (the
@@ -170,14 +184,16 @@ training CV the transformer ensemble and LightGBM counts were within noise on AU
 0.764 pooled out of fold) and LightGBM was ahead on mAP. Round 3 then tested output stacking with
 nested folds: for each fold, the stacker is fitted on the other four folds' out-of-fold
 predictions. The parameter-free mean of logits beat the transformer ensemble by +0.014 AUROC
-[+0.009, +0.019] and LightGBM counts by +0.011 [+0.007, +0.014] (mean fold AUROC 0.780, mAP
+[+0.009, +0.019] and LightGBM counts by +0.011 [+0.007, +0.014] (1,000 resamples) (mean fold AUROC 0.780, mAP
 0.236), a learned per-target logistic stacker gained only 0.001 more, and the pre-registered rule
 adopted the fixed blend. Per-target Platt scaling of the blend, also nested, lowered Brier on 4
 of 5 folds and macro expected calibration error from 0.013 to 0.010, with per-target AUROC
 unchanged by construction (a non-positive fitted slope falls back to the identity).
 
 **Curves.** Training loss, learning rate, and gradient norm are logged per step, and held-out
-fold metrics per epoch, for all transformer runs in the wandb project above. Figure 1 shows the
+fold metrics per epoch, for all transformer runs in the wandb project above; the 15 members are
+the runs `small-v2-c1-fold<k>-F`, `small-v2-c1-seed2-fold<k>-F`, and `small-v2-c1-seed3-fold<k>-F`
+(ids in `reports/final/manifest.json`). Figure 1 shows the
 requested validation curves: every saved epoch checkpoint of the 15 members scored on the official
 val split after training, inside the frozen bundle. The epochs selected on the held-out training
 folds (dots) sit near but mostly before the val optimum; val would have picked a later epoch in 13
@@ -187,7 +203,9 @@ of 15 members and gained 0.008 AUROC on average. That choice was not made.
 members; dots: the epoch each member's held-out training fold selected; the orange line is the
 mean over members at that epoch.](figures/val_curves.png){width=92%}
 
-**Evaluation protocol.** Five folds of the training split (patients never shared across folds),
+**Evaluation protocol.** Five folds of the training split (plain shuffled K-fold, seed 20261028,
+no stratification; the rarest target has 4 to 6 positives per held-out fold; patients never shared
+across folds),
 one out-of-fold prediction per patient from the models that did not fit on them, macro AUROC and
 mAP over 40 targets with the common prior mask, plus Brier score, with 95% patient-level BCa
 bootstrap intervals (1,000 resamples) and paired bootstraps for differences. Official val was
@@ -196,9 +214,12 @@ freeze, refuses to run on a changed tree or artifact, writes a start record befo
 and a completion record after, and refuses a second run without a documented reason. It ran
 twice: attempt 1 scored the transformer ensemble (0.751 / 0.209) before the blend existed;
 attempt 2 scored the blend after round 3 was decided on training CV. Both records are kept
-(`reports/val/`, `reports/val/attempts/`). The first attempt's numbers were known when round 3
-was written; its rules used only training CV, and the blend's val score could not be used to
-change it.
+(`reports/val/`, `reports/val/attempts/`). Before the bundle existed, the step-2 baselines
+(logistic regression and the incidence table) had scored val once, on 28 and 29 October, so the
+val labels were read three times in all. Attempt 1 had shown LightGBM ahead of the transformer on
+val mAP, and round 3, which added LightGBM to the submission, was opened after that; its rules
+used training CV only, but attempt 2 is a second look at the same 365 patients, not an independent
+check. The hidden test set is the independent check.
 
 ## 3. AI workflow
 
@@ -208,7 +229,7 @@ every result before the next step. The division is recorded in `docs/ai_workflow
 reasoning for each decision in `docs/decisions.md`.
 
 What kept the AI's work honest: the plan was written before the code and each revision says what
-was known when it was made; 193 unit tests include mutation-style checks (changing `<` to `<=` in
+was known when it was made; 199 tests include mutation-style checks (changing `<` to `<=` in
 the anchor rule fails a test; a future record must leave predictions unchanged; a resumed run must
 match an uninterrupted one; adding held-out rows must not change the fitted vocabulary); the
 adoption rule was fixed before the first transformer result; every experiment block was committed
@@ -230,7 +251,8 @@ including any use of Codex CLI.]
 
 ## 4. Interpretation
 
-**Where the model does well.** Seven targets are above 0.95 AUROC for every model: prostate
+**Where the model does well.** Seven targets are above 0.95 AUROC for the blend (six of them for
+the transformer and LightGBM counts as well): prostate
 neoplasm, carcinoma in situ and metastasis of the prostate, normal pregnancy, pneumonia, obesity,
 and the pregnancy-complication code. Each follows a visible Synthea pathway (PSA tests and rectal
 exams, oral contraceptives, dementia care plans, BMI observations). A leakage review of these
@@ -243,7 +265,8 @@ shows every target for the final blend and its two parts.
 counts, sorted by the blend. Numbers in parentheses are val positives; most targets have 5 to 20,
 so single-target differences are noisy.](figures/val_per_target.png){width=74%}
 
-**Where it does poorly, and why.** Nine targets are below 0.6 for every model: whiplash,
+**Where it does poorly, and why.** Nine targets are below 0.6 for the blend (seven of them for
+the transformer and LightGBM counts too, five for all six models scored): whiplash,
 lacerations, wrist and ankle injuries, clavicle fracture, sinusitis, and strep throat. Synthea
 generates these acute events with little dependence on the prior record, so no history model can
 rank them; the age-sex table is at chance too. The transformer's largest losses to LightGBM are
@@ -264,7 +287,8 @@ better of the two per target would reach 0.778 against 0.774 for the blend.
 almost always means the patient died by 2020 (1,155 of 1,219 training patients), and those
 patients have more new diagnoses (2.37 against 1.48). Scores split by era are similar for every
 model, and an era signal remains in the clinical codes and age even without the clock codes
-(AUROC 0.865 for predicting the era). It cannot be removed without removing history, so it is
+(AUROC 0.876 for predicting the era on fold 0; `reports/dataset/clock_scan.txt`). It cannot be
+removed without removing history, so it is
 reported.
 
 **Calibration.** Prior-condition cells are exact zeros. The raw blend under-predicts slightly in
@@ -275,10 +299,16 @@ the middle of its range (Figure 3); the Platt map corrects it. On val the blend'
 10 equal-mass bins of all at-risk patient-target cells.](figures/reliability.png){width=58%}
 
 **Limits.** The data are synthetic and the anchor is retrospective, so nothing here is evidence
-about clinical use. Val is small: the macro AUROC interval is about 0.04 wide and nine targets
-have at most eight positives. Every CV number for the chosen configuration is the best of 24
-transformer trials plus three stackers on the same five folds, so it is optimistic; the val
-scores are the first check and the hidden test the second. Two seeds of CV variation (about 0.002
+about clinical use. Val is small: the macro AUROC interval is about 0.04 wide and eleven targets
+have at most eight positives. Every CV number for the chosen configuration is the best of 28
+transformer configurations (`models/transformer/`, counting seeds and pretraining parents) plus
+three stackers on the same five folds, so it is optimistic: the blend's mean-fold CV AUROC is
+0.780 (pooled 0.774) against 0.767 on val, and choosing epochs on val instead of the training
+fold would have added 0.008 to the members (`reports/val/val_curves.csv`). The val scores are the
+first check and the hidden test the second. The LightGBM setting the blend uses sits on the edge
+of its search grid on all three axes (4 leaves, 100 trees, minimum child size 20) and the grid was
+not extended; a simpler setting might score higher, and that was left alone because any change
+would need a new budget, a refreeze, and a third val read. Two seeds of CV variation (about 0.002
 AUROC in the mean, up to 0.014 per fold) are comparable to several of the differences in the
 tuning tables. A macro AUROC of 0.80 is out of reach on this data without the clock codes:
 the nine near-chance targets cap the average, and even an oracle choice between the transformer
@@ -288,24 +318,28 @@ and LightGBM per target reaches 0.778 in CV.
 
 | Split | Model | Macro AUROC | mAP |
 |---|---|---|---|
-| train CV, pooled out of fold | blend (submitted) | 0.774 | 0.212 |
+| train CV, pooled out of fold | blend (submitted), before Platt scaling | 0.774 | 0.212 |
 | train CV, pooled out of fold | transformer ensemble | 0.761 | 0.181 |
 | train CV, pooled out of fold | LightGBM counts | 0.764 | 0.188 |
 | **val** (365), attempt 2 | **blend (submitted)** | **0.767 [0.746, 0.788]** | **0.258 [0.234, 0.268]** |
 | val, attempt 2 | transformer ensemble | 0.751 | 0.209 |
-| val, attempt 2 | LightGBM counts | 0.762 | 0.239 |
-| val, attempt 2 | LightGBM counts + values | 0.758 | 0.257 |
-| val, attempt 2 | logistic regression, codes | 0.764 | 0.222 |
-| val, attempt 2 | age-sex incidence, at risk | 0.727 | 0.141 |
+| val, attempt 2 | LightGBM counts | 0.762 [0.740, 0.781] | 0.239 [0.209, 0.249] |
+| val, attempt 2 | LightGBM counts + values | 0.758 [0.740, 0.780] | 0.257 [0.228, 0.267] |
+| val, attempt 2 | logistic regression, codes | 0.764 [0.742, 0.782] | 0.222 [0.195, 0.229] |
+| val, attempt 2 | age-sex incidence, at risk | 0.727 [0.705, 0.751] | 0.141 [0.125, 0.146] |
 | val, attempt 1 | transformer ensemble | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] |
 | test (358) | blend (submitted) | organisers' score | organisers' score |
 
 Paired on val, blend minus transformer ensemble: AUROC +0.016 [+0.002, +0.030], mAP +0.049 [+0.033, +0.072]; blend minus LightGBM
-counts: AUROC +0.005 [-0.005, +0.016], mAP +0.019 [+0.002, +0.040]. `predictions.csv` holds 358 rows by 40 code columns.
+counts: AUROC +0.005 [-0.005, +0.016], mAP +0.019 [+0.002, +0.040]. The comparison models' own
+intervals were computed after the bundle from its saved prediction files
+(`reports/val/post_hoc_single_model_intervals.json`). The CV blend row is before Platt scaling;
+the per-fold maps change pooled scores (0.767 / 0.206) but no per-fold score. `predictions.csv`
+holds 358 rows by 40 code columns.
 
 Reproduction: `make setup`, link the dataset to `data/raw`, then `make dataset`, `make modalities`,
 `make folds`, `make tokenize`, `make pretrain` and `make finetune` per fold and seed, `make
-lightgbm`, `make stacking`, `make calibration`, `make lightgbm-final`, `make freeze`, `make
+lightgbm` and `make lightgbm-clean`, `make stacking`, `make calibration`, `make lightgbm-final`, `make freeze`, `make
 val-score`, `make predict`, `make submission`, `make package`. The Hugging Face package carries the
 15 transformer checkpoints, 5 tokenizers, 80 LightGBM boosters with their feature specs, and the
 Platt weights; `python -m ehrforecast.hf_package verify` rebuilds `predictions.csv` from it on CPU
