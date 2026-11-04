@@ -177,18 +177,17 @@ def test_score_refuses_a_dirty_tree_a_changed_artifact_and_a_completed_bundle(
     manifest_path = root / "models" / "final" / "manifest.json"
     write_json(manifest_path, manifest)
     reports = root / "reports" / "val"
-    common = dict(device=CPU, wandb_mode="disabled", lightgbm=False)
 
     monkeypatch.setattr(val_score, "tracked_changes", lambda root: [" M src/x.py"])
     with pytest.raises(ValueError, match="working tree has changes"):
-        val_score.run(root, final_path, dataset, models, manifest_path, reports, **common)
+        _run(root, final_path, dataset, models, manifest_path, reports)
     assert not reports.exists()
 
     monkeypatch.setattr(val_score, "tracked_changes", lambda root: [])
     member = manifest["members"][0]
     (models / member["tokenizer"]).write_text("{}")
     with pytest.raises(ValueError, match="hash mismatch"):
-        val_score.run(root, final_path, dataset, models, manifest_path, reports, **common)
+        _run(root, final_path, dataset, models, manifest_path, reports)
     assert not reports.exists()
 
     manifest["model_hashes"][member["tokenizer"]] = val_score.file_hash(
@@ -198,12 +197,26 @@ def test_score_refuses_a_dirty_tree_a_changed_artifact_and_a_completed_bundle(
     reports.mkdir(parents=True)
     write_json(reports / "bundle.json", {"status": "completed", "bundle_id": "abc"})
     with pytest.raises(ValueError, match="replacement"):
-        val_score.run(root, final_path, dataset, models, manifest_path, reports, **common)
+        _run(root, final_path, dataset, models, manifest_path, reports)
     assert json.loads((reports / "bundle.json").read_text())["status"] == "completed"
 
     final_path.write_text(_toml({**FINAL, "checkpoint": "last.pt"}))
     with pytest.raises(ValueError, match="changed after the freeze"):
-        val_score.run(root, final_path, dataset, models, manifest_path, reports, **common)
+        _run(root, final_path, dataset, models, manifest_path, reports)
+
+
+def _run(root: Path, final: Path, dataset: Path, models: Path, manifest: Path, out: Path) -> None:
+    val_score.run(
+        root,
+        final,
+        dataset,
+        models,
+        manifest,
+        out,
+        device=CPU,
+        wandb_mode="disabled",
+        lightgbm=False,
+    )
 
 
 def _toml(value: dict[str, Any]) -> str:
