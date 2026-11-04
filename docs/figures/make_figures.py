@@ -88,3 +88,29 @@ ax.legend(frameon=False, loc="upper left", fontsize=8)
 fig.tight_layout()
 fig.savefig(out / "reliability.png")
 print("wrote", out / "reliability.png")
+
+# Figure 4: training curves of the 15 members (from reports/transformer/member_curves.csv):
+# pretraining held-out next-token loss per epoch, then fine-tuning training loss and held-out AUROC.
+mc = pd.read_csv(root / "reports/transformer/member_curves.csv")
+fig, axes = plt.subplots(1, 3, figsize=(9.6, 2.9))
+pre = mc[mc.phase == "pretrain"]
+for (cfg, fold), d in pre.groupby(["config", "fold"]):
+    axes[0].plot(d.epoch, d.held_loss, color=BLUE, alpha=0.3, lw=1)
+axes[0].plot(pre.groupby("epoch").held_loss.mean(), color=ORANGE, lw=2, label="mean of 15")
+axes[0].set_title("pretraining: held-out next-token loss", fontsize=9)
+axes[0].set_xlabel("epoch"); axes[0].set_ylabel("nats per token")
+ft = mc[mc.phase == "finetune"]
+for (cfg, fold), d in ft.groupby(["config", "fold"]):
+    axes[1].plot(d.epoch, d.train_loss_epoch, color=BLUE, alpha=0.3, lw=1)
+    axes[2].plot(d.epoch, d.held_macro_auroc, color=BLUE, alpha=0.3, lw=1)
+m1 = ft.groupby("epoch").agg(train=("train_loss_epoch", "mean"), auc=("held_macro_auroc", "mean"), n=("fold", "size"))
+m1 = m1[m1.n >= 5]
+axes[1].plot(m1.index, m1.train, color=ORANGE, lw=2); axes[2].plot(m1.index, m1.auc, color=ORANGE, lw=2)
+axes[1].set_title("fine-tuning: training loss", fontsize=9); axes[1].set_xlabel("epoch"); axes[1].set_ylabel("BCE per cell")
+axes[2].set_title("fine-tuning: held-out fold macro AUROC", fontsize=9); axes[2].set_xlabel("epoch"); axes[2].set_ylim(0.68, 0.80)
+for ax in axes:
+    ax.grid(axis="y", color=GRID, lw=0.6)
+axes[0].legend(frameon=False, fontsize=8)
+fig.tight_layout()
+fig.savefig(out / "training_curves.png")
+print("wrote", out / "training_curves.png")

@@ -95,9 +95,11 @@ Full tables and per-condition results are in the repository under `docs/` and `r
 
 The data are synthetic. Anchors are five years before each patient's last encounter, so an early
 anchor usually means the patient died, which any history model can read. Nine of the 40 targets
-(acute injuries and infections) are near chance for the blend, five of them for every model tried. Having a genotype file or
-a scan is itself correlated with outcomes in this dataset; the modality tokens showed no
-measurable effect in CV. This is not a clinical tool.
+(acute injuries and infections) are near chance for the blend, five of them for every model tried. The copy used had an
+incomplete genomics download (400 files; listed in the repository under
+`reports/dataset/modality_files.json`), and in that copy having a genotype file correlates with
+outcomes; the modality tokens showed no measurable effect in CV. To reproduce the predictions
+from a complete download, restrict the genomics folder to the listed files. This is not a clinical tool.
 
 ## Data and licence
 
