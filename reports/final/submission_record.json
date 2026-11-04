@@ -1,7 +1,7 @@
 {
-  "recorded_at": "2026-11-03T23:50:17-0500",
-  "commit": "812393ed3135ed1e977f40e872da535c44c14b3c",
-  "tracked_changes": "M Makefile\n M README.md\n M data/README.md\n M docs/ai_workflow.md\n M docs/decisions.md\n M docs/handoff_claude.md\n M docs/model_card.md\n M docs/model_results.md\n M docs/report.md\n M docs/report.pdf\n M reports/stacking/clean/stacking.json\n M scripts/checks/clock_scan.py\n M src/ehrforecast/hf_package.py\n M tests/test_audit_boundaries.py\n M tests/test_model.py",
+  "recorded_at": "2026-11-03T23:50:47-0500",
+  "commit": "e59aea8924b15a477a7b4c8672a5b2d1b94909e6",
+  "tracked_changes": "",
   "files": {
     "predictions.csv": {
       "sha256": "12d17a321febcac3e51d19274b91cb3155c3f9e914a51c55e18c94d19e0e97b3",
