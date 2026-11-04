@@ -12,8 +12,8 @@ marked **author** need a decision or an account that only the author has.
 | 3 | Export the PDF after 1 and 2 (the author exports it; `cd docs && pandoc report.md -o report.pdf --pdf-engine=xelatex` also works) | `docs/report.md` is the author's text (commit 81ee8be); `docs/report.pdf` is still the earlier draft | **author**: export to `docs/report.pdf` |
 | 4 | Save the PDF as `<your_name>_results.pdf` (the name the brief asks for) | `docs/report.pdf` | **author**: copy under the final name; then `make submission-record` |
 | 5 | GitHub repository public, with `final-deliverable` merged to `main` | merged to `main` and pushed; repository private | **author**: set the repository to public and open the link logged out |
-| 6 | Model on the Hugging Face Hub (`Reaper8202/ehr-forecast`) | not uploaded (`models/hf` built and verified locally, 125 files, 51 MB) | **author**: `hf auth login`, then `hf upload Reaper8202/ehr-forecast models/hf . --repo-type model`; open the page logged out |
-| 7 | wandb project public (`derek-wu820-university-of-toronto/ehr-forecast`) | private (anonymous read returns no project) | **author**: set the project to public; open the link in the report logged out. The entity name carries the author's real name; keeping it is the author's call (the brief requires the link) |
+| 6 | Model on the Hugging Face Hub (`Reaper8202/ehr-forecast`) | uploaded and public (4 November; 125 files plus `.gitattributes`, card renders) | nothing |
+| 7 | wandb project public (`derek-wu820-university-of-toronto/ehr-forecast`) | public read since 4 November (233 runs readable without a login) | nothing; the entity name carries the author's real name by the author's choice |
 | 8 | `predictions.csv` | 358 x 40, columns in `target_conditions.csv` order, every test patient, all values in [0, 1], regenerated from the package to 0.0 difference (re-checked 4 November) | nothing; send the committed file |
 | 9 | `reports/final/submission_record.json` (hashes of the files sent, with the commit) | written for the current files | re-run `make submission-record` after 3 and 4 |
 
