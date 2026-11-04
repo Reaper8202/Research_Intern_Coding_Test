@@ -121,7 +121,19 @@ PYTHONPATH=src python -m ehrforecast.predict --dataset data/processed --split te
     --run-dir models/transformer/small-v2-c1{,-seed2,-seed3}/fold{0,1,2,3,4}/F --out predictions.csv
 ```
 
-The last command runs 15 models and takes about 6 minutes. `scripts/checks/` holds the one-off
+Step 5 (P4e). The frozen bundle scores official val once and writes the test predictions:
+
+```bash
+make freeze                       # configs/final.toml -> models/final/manifest.json (every hash)
+make val-score                    # one recorded val run -> reports/val/ (refuses a changed tree)
+make predict                      # test probabilities from the frozen members -> predictions.csv
+```
+
+`make val-score` refits the LightGBM comparison baselines on all training patients in a separate
+process (`ehrforecast.lightgbm_val`), scores the ensemble and every saved epoch checkpoint on val,
+and logs the val curves to wandb. A second run needs `--replacement` with a documented reason;
+the first attempt is kept under `reports/val/attempts/`. The ensemble prediction above runs 15
+models and takes about 6 minutes. `scripts/checks/` holds the one-off
 data checks behind D15, D31, and D36.
 
 Genotypes enter as `[DNA] dna:<site>:<variant alleles>` tokens. A scan enters as one `[IMG]`
@@ -208,4 +220,6 @@ review: `docs/baseline_results.md`.
 | `predict.py` | label-free prediction from saved fold models |
 | `smoke.py` | G2 end-to-end execution check |
 | `cv_summary.py` | five-fold results, method selection, config comparison |
+| `lightgbm_val.py` | LightGBM comparison baselines refitted on train and scored on val (P4e) |
+| `val_score.py` | P4e: artifact freeze, hash verification, the one official val run, val curves |
 | `wandb_sync.py` | upload finished offline wandb runs |

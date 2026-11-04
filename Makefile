@@ -16,10 +16,12 @@ METHOD ?= F
 RESUME ?=
 RESUME_FLAG = $(if $(RESUME),--resume,)
 WANDB_ENTITY ?= derek-wu820-university-of-toronto
+WANDB_MODE ?= online
+DEVICE ?= cpu
 
 .PHONY: setup lint format typecheck test check dataset baseline folds preflight \
 	modalities tokenize pipeline-smoke pretrain finetune cv-summary experiments \
-	experiments-summary lightgbm wandb-sync clean
+	experiments-summary lightgbm freeze val-score predict wandb-sync clean
 
 # Exact versions from requirements-lock.txt, then the package itself in editable mode.
 setup:
@@ -124,6 +126,25 @@ experiments-summary:
 	$(PYTHON) -m ehrforecast.experiments summarize --budget configs/budget.toml \
 		--models $(MODELS_DIR)/transformer --reports $(REPORTS_DIR)/transformer \
 		--log-file $(LOGS_DIR)/experiments.log
+
+# P4e: record every artifact hash of the submitted ensemble (configs/final.toml).
+freeze:
+	$(PYTHON) -m ehrforecast.val_score freeze --config configs/final.toml \
+		--dataset $(PROCESSED_DIR) --models $(MODELS_DIR) --manifest $(MODELS_DIR)/final/manifest.json \
+		--log-file $(LOGS_DIR)/freeze.log
+
+# P4e: score official val once from the frozen manifest; refuses a changed tree or artifact.
+val-score:
+	$(PYTHON) -m ehrforecast.val_score score --config configs/final.toml \
+		--dataset $(PROCESSED_DIR) --models $(MODELS_DIR) --manifest $(MODELS_DIR)/final/manifest.json \
+		--reports $(REPORTS_DIR)/val --device $(DEVICE) --wandb $(WANDB_MODE) \
+		--wandb-entity $(WANDB_ENTITY) --log-file $(LOGS_DIR)/val_score.log
+
+# Step 5: test-split probabilities from the frozen ensemble (reads no labels).
+predict:
+	$(PYTHON) -m ehrforecast.predict --dataset $(PROCESSED_DIR) --split test \
+		--run-dir $(shell $(PYTHON) -c "import json;print(' '.join('$(MODELS_DIR)/'+m['run_dir'] for m in json.load(open('$(MODELS_DIR)/final/manifest.json'))['members']))") \
+		--device $(DEVICE) --out predictions.csv --log-file $(LOGS_DIR)/predict.log
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).
 wandb-sync:

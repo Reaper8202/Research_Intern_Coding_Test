@@ -1,0 +1,30 @@
+# P4e frozen bundle (model plan section 11; decision D36).
+# The submitted model is the mean of fifteen fold models: configuration small-v2-c1 and its two
+# seed repeats, five folds each, method F, each fold's best epoch on its held-out training fold.
+# `make freeze` records every artifact hash in models/final/manifest.json. `make val-score` reads
+# official val once; it refuses a changed tree, a changed artifact, or a completed bundle.
+name = "final"
+decision = "D36"
+method = "F"
+checkpoint = "best.pt"
+folds = [0, 1, 2, 3, 4]
+members = [
+    "configs/experiments/v2_c1.toml",
+    "configs/experiments/v2_c1_seed2.toml",
+    "configs/experiments/v2_c1_seed3.toml",
+]
+
+[evaluation]
+n_boot = 1000                 # patient BCa resamples, as in training CV
+bootstrap_seed = 0
+clock_year = 2015             # D36 anchor-era subgroup: anchors before this year
+curves = true                 # score every saved epoch checkpoint of every member on val
+
+# Section 5.5 predeclared comparisons. Step-2 files were written by `make baseline` from
+# train-only fits. LightGBM is refitted on all training patients with the settings that
+# training CV selected (reports/lightgbm_clean/cv_summary.json), in a separate process.
+[comparisons]
+logreg_codes = "reports/baseline/val_predictions_logreg_codes.csv"
+incidence_at_risk = "reports/baseline/val_predictions_incidence_age_sex_at_risk.csv"
+lightgbm_settings = "reports/lightgbm_clean/cv_summary.json"
+lightgbm_feature_sets = ["counts", "counts_values"]
