@@ -144,7 +144,7 @@ val-score:
 # Step 5: test-split probabilities from the frozen ensemble (reads no labels).
 predict:
 	$(PYTHON) -m ehrforecast.predict --dataset $(PROCESSED_DIR) --split test \
-		--run-dir $(shell $(PYTHON) -c "import json;print(' '.join('$(MODELS_DIR)/'+m['run_dir'] for m in json.load(open("$(MANIFEST)"))['members']))") \
+		--run-dir $$($(PYTHON) -c 'import json; print(" ".join("$(MODELS_DIR)/" + m["run_dir"] for m in json.load(open("$(MANIFEST)"))["members"]))') \
 		--device $(DEVICE) --out predictions.csv --log-file $(LOGS_DIR)/predict.log
 
 # Upload finished offline wandb runs (runs still training are skipped; safe to repeat).

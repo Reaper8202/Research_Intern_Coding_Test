@@ -17,3 +17,9 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# P4e bundle wandb logs (the records are reports/val/*.json and *.csv)
+reports/val/wandb/
+
+# pip build output from a non-editable install
+build/

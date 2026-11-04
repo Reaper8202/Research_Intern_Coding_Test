@@ -388,3 +388,57 @@ P3b scores were not. All three components failed the rule alone, so the componen
 lenient than the rule. Best epochs are chosen on the held-out fold, which adds about 0.003. The
 ensemble is three fits per patient against one LightGBM fit, and a bagged LightGBM was not tested.
 Only the single P4e val check and the hidden test correct these effects.
+
+## D37. Official val scored once by the frozen bundle; the candidate stands
+
+**Decision.** The submission is the D36 ensemble: `small-v2-c1` and its two seed repeats, five
+folds each, method F, each fold's best epoch, probabilities averaged over the 15 models and
+prior-condition cells set to 0. The val score below did not change this choice and could not: the
+bundle refuses a second run without a documented reason, and none exists.
+
+**Procedure.** `make freeze` (commit 8e8725e) recorded the hash of every checkpoint, epoch
+checkpoint, tokenizer, dataset manifest, source file, the lock file, and the step-2 comparison
+files in `reports/final/manifest.json`. `make val-score` verified them, checked the tracked tree
+was clean, wrote a start record, refitted the LightGBM comparison baselines on all training
+patients with their CV-selected settings in a separate process, read the val labels once, and
+wrote `reports/val/`. Bundle `168b78f5b5d8`, started 20:46 on 3 November 2026, CPU, one attempt.
+
+**Result (365 val patients, 685 positive labels, common mask, 95% patient BCa, 1,000 resamples).**
+
+| Model | Macro AUROC | mAP | Brier |
+|---|---|---|---|
+| Transformer ensemble | 0.751 [0.730, 0.773] | 0.209 [0.192, 0.211] | 0.0381 |
+| Logistic regression, codes (step 2) | 0.764 | 0.222 | 0.0384 |
+| LightGBM counts | 0.762 | 0.239 | 0.0370 |
+| LightGBM counts + values | 0.758 | 0.257 | 0.0367 |
+| At-risk age-sex incidence (step 2) | 0.727 | 0.141 | 0.0390 |
+
+| Transformer minus | AUROC | mAP | Brier |
+|---|---|---|---|
+| at-risk incidence | +0.025 [+0.001, +0.045] | +0.068 [+0.036, +0.086] | -0.0009 [-0.0017, -0.0001] |
+| logistic regression, codes | -0.013 [-0.031, +0.006] | -0.013 [-0.039, +0.013] | -0.0003 [-0.0010, +0.0004] |
+| LightGBM counts | -0.010 [-0.031, +0.010] | -0.030 [-0.060, -0.011] | +0.0011 [+0.0005, +0.0017] |
+| LightGBM counts + values | -0.007 [-0.031, +0.012] | -0.048 [-0.080, -0.024] | +0.0014 [+0.0007, +0.0022] |
+
+**Reading.** Val agrees with training CV (D36): the transformer ranks about as well as the
+count-based baselines and trails them on average precision and calibration. The step-2
+logistic regression scores 0.764 here against 0.756 in `baseline_results.md` because this bundle
+applies the common prior mask and the version-2 metric to the same saved probabilities. The val
+split is small: the 40-target macro AUROC has a 0.04-wide interval, and 9 targets have at most 8
+positives. By anchor era, the transformer scores 0.722 / 0.239 (155 patients, anchor before 2015)
+and 0.730 / 0.129 (210 patients, from 2015); LightGBM counts scores 0.752 / 0.260 and 0.739 /
+0.192. On the 21 val patients with a genotype file or pre-anchor scan, the transformer scores
+0.719 against 0.711 for LightGBM counts; the subgroup is too small to read.
+
+**Per target (`reports/val/val_per_target.csv`).** The transformer is higher than LightGBM counts
+on 16 of 40 targets. Its largest losses are again the count-driven conditions: osteoporosis
+(0.804 against 0.895), recurrent rectal polyp (0.860 against 0.946), myocardial infarction
+(0.827 against 0.904), the three lung-cancer codes (0.76 to 0.79 against 0.83 to 0.85), and
+pathological fracture (0.847 against 0.909). Its largest wins are the paired brain targets
+(silent micro-haemorrhage and abnormal gait, 0.905 against 0.832) and concussion (0.686 against
+0.540, 7 positives). Nine targets are below 0.6 for every model: the acute injuries and
+infections, as in CV.
+
+**Val curves.** Every saved epoch checkpoint of the 15 members was scored on val after training
+and logged to wandb (group `val-bundle-168b78f5b5d8`); `reports/val/val_curves.csv`. The best
+epoch was chosen on each member's held-out training fold and was not changed.

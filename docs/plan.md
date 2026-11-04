@@ -24,8 +24,8 @@ This revision changes the plan. It does not complete an implementation phase.
 | 1 | Anchors, leak-free history, labels (`ehrforecast.build_dataset`) | done |
 | 2 | Baselines: age-sex incidence tables and logistic regression on code counts plus age and sex (`ehrforecast.train_baseline`) | done |
 | 3 | Folds, common prior mask, baseline reproduction, input contracts, tokenizer, sequences, and leakage tests (P3a–P3c) | done (not yet reviewed by Derek) |
-| 4 | Complete small-model run, three training methods, full comparisons, bounded extensions, and frozen val evaluation (P4a–P4f; generation deferred) | training code done; G2 smoke test passed; P4a training next |
-| 5 | Test predictions, report, GitHub, Hugging Face | planned |
+| 4 | Complete small-model run, three training methods, full comparisons, bounded extensions, and frozen val evaluation (P4a–P4f; generation deferred) | done: D34–D36 rounds complete; frozen val bundle run once on 3 November (D37) |
+| 5 | Test predictions, report, GitHub, Hugging Face | in progress: `predictions.csv` written; package built; report drafted |
 
 ## Where each known risk is handled
 
@@ -139,8 +139,20 @@ searches also wait for G2. Earlier compute estimates are withdrawn.
   of three seeds. Failed: lower body learning rate, weight decay, all three together (mAP), the
   age-sex head alone, 60 pretraining epochs, and context 512 and 2,048 (fold-0 screens).
   The LightGBM gap shrank from -0.023 to -0.014 AUROC [-0.021, -0.006] and remains reported.
-* Next: P4e. Freeze the `small-v1-mm-do03` bundle (five fold models), score official val once,
-  and write the test predictions.
+* Round 2 (D36) replaced the candidate with `small-v2-c1` averaged over three seeds (15 fold
+  models) after removing the simulator clock codes DALY, QALY, and QOLS.
+
+## Status on 3 November 2026 (step 5)
+
+* P4e ran once (D37). `make freeze` recorded 294 artifact, data, code, and comparison-file hashes
+  in `reports/final/manifest.json` at commit 8e8725e. `make val-score` then scored official val:
+  macro AUROC 0.751 [0.730, 0.773], mAP 0.209 [0.192, 0.211]. The transformer beats the at-risk
+  incidence table (+0.025 AUROC, interval above zero), is indistinguishable in AUROC from
+  LightGBM counts and the step-2 logistic regression, and trails LightGBM on mAP. One attempt;
+  no replacement bundle. Details: `docs/model_results.md`, `reports/val/`.
+* `make predict` wrote `predictions.csv` (358 test patients x 40 codes) from the same 15 members.
+* `ehrforecast.hf_package` builds the public package in the `models/transformer` layout, so the
+  README's prediction command works from the download; `verify` reproduces `predictions.csv`.
 
 Measured time on this Mac (MPS), per fold: pretraining 20–61 minutes, H 2–6, F 12–15, and S 13–23
 minutes for folds 0–3. Fold 4 ran with the D33 fix and took 10, 2.5, 3, and 3 minutes. Most of the

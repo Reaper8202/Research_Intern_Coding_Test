@@ -4,7 +4,7 @@ Predicts which of 40 conditions a patient will be diagnosed with for the first t
 years after a landmark ("anchor") date, using only the synthetic EHR events recorded before that
 date. Data: the Synthea Coherent dataset as released for the research intern coding test.
 
-Status: steps 1 to 3 are done. The CSV-only transformer (`small-v1`) is trained on all five
+Status: steps 1 to 4 are done and the official val bundle has run (step 5 in progress). The CSV-only transformer (`small-v1`) is trained on all five
 training folds; self-pretraining then full fine-tuning (F) was selected. The submitted model is
 multimodal (`small-v1-mm`, decision D34): the same transformer plus genotype tokens and a brain
 MRI token from a 3-D CNN. A pre-registered tuning round (D35, `configs/budget.toml`) selected
@@ -170,18 +170,26 @@ removes everything that these commands generate, except the committed reports.
 * New model choices use cross-validation on train. The baseline has already been evaluated on
   val. The transformer plan freezes all choices before one recorded val evaluation bundle.
 
-## Results so far (val, 365 patients)
+## Results
 
-| Model | Macro AUROC | mAP |
-|---|---|---|
-| Age-sex incidence table | 0.692 [0.667, 0.716] | 0.111 [0.097, 0.116] |
-| Age-sex incidence table, at-risk patients only | 0.727 [0.703, 0.749] | 0.141 [0.120, 0.148] |
-| Logistic regression, age and sex | 0.698 [0.675, 0.722] | 0.113 [0.102, 0.118] |
-| Logistic regression, code counts + age and sex | 0.756 [0.735, 0.775] | 0.217 [0.185, 0.225] |
+Official val (365 patients, 685 positive labels), scored once by the frozen bundle
+(`reports/val/`, bundle in `reports/val/bundle.json`). All models use the common prior-condition
+mask; intervals are 95% patient BCa bootstrap intervals (1,000 resamples).
 
-95% BCa bootstrap intervals. The code-count model beats the at-risk incidence table by +0.029
-macro AUROC [+0.003, +0.054] (paired bootstrap). Details, per-condition analysis, and a leakage
-review: `docs/baseline_results.md`.
+| Model | Macro AUROC | mAP | Brier |
+|---|---|---|---|
+| **Submitted transformer** (`small-v2-c1`, 3 seeds x 5 folds) | **0.751** [0.730, 0.773] | **0.209** [0.192, 0.211] | 0.0381 |
+| Logistic regression, code counts + age and sex (step 2) | 0.764 | 0.222 | 0.0384 |
+| LightGBM counts (refitted on train, CV-selected setting) | 0.762 | 0.239 | 0.0370 |
+| LightGBM counts + values | 0.758 | 0.257 | 0.0367 |
+| Age-sex incidence table, at-risk patients only (step 2) | 0.727 | 0.141 | 0.0390 |
+
+Paired differences, transformer minus comparison: at-risk incidence +0.025 AUROC [+0.001, +0.045];
+LightGBM counts -0.010 [-0.031, +0.010] AUROC and -0.030 [-0.060, -0.011] mAP; logistic
+regression -0.013 [-0.031, +0.006] AUROC. On val the transformer beats the epidemiological
+reference, ranks about as well as the two count-based baselines, and trails them on average
+precision. Training CV said the same (`docs/decisions.md`, D36). Test labels are hidden; test
+scores belong to the organisers. Per-target and subgroup results: `docs/model_results.md`.
 
 ## Package modules
 
@@ -222,4 +230,5 @@ review: `docs/baseline_results.md`.
 | `cv_summary.py` | five-fold results, method selection, config comparison |
 | `lightgbm_val.py` | LightGBM comparison baselines refitted on train and scored on val (P4e) |
 | `val_score.py` | P4e: artifact freeze, hash verification, the one official val run, val curves |
+| `hf_package.py` | build and verify the public model package (Hugging Face Hub) |
 | `wandb_sync.py` | upload finished offline wandb runs |

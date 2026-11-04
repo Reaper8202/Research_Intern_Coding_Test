@@ -319,7 +319,12 @@ def val_curves(
                 run.log({k: v for k, v in row.items() if isinstance(v, int | float)})
         if run is not None:
             run.finish()
-        log.info("Val curve: %s fold %d, %d checkpoints", m["config"], m["fold"], len(rows))
+        log.info(
+            "Val curve: %s fold %d, %d checkpoints",
+            m["config"],
+            m["fold"],
+            len(m["epoch_checkpoints"]),
+        )
     return pd.DataFrame(rows).sort_values(["config", "fold", "epoch"]).reset_index(drop=True)
 
 

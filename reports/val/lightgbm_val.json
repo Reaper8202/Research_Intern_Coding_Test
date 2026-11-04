@@ -1,0 +1,26 @@
+{
+  "excluded_observations": [
+    "DALY",
+    "QALY",
+    "QOLS"
+  ],
+  "feature_sets": {
+    "counts": {
+      "file": "val_predictions_lightgbm_counts.csv",
+      "min_child_samples": 20,
+      "n_estimators": 100,
+      "n_features": 1064,
+      "num_leaves": 4
+    },
+    "counts_values": {
+      "file": "val_predictions_lightgbm_counts_values.csv",
+      "min_child_samples": 20,
+      "n_estimators": 100,
+      "n_features": 1352,
+      "num_leaves": 4
+    }
+  },
+  "n_train": 2791,
+  "n_val": 365,
+  "scope": "fitted on all training patients; scored on official val; no labels read"
+}
