@@ -1,0 +1,47 @@
+# Round 3. Written on 3 November 2026 at 21:40, before any score of the runs and rules below.
+# Derek asked to complete the assessment to the best of our ability: close the gaps a reviewer
+# would ask about, and decide the submission by rules written before the numbers.
+#
+# Status before this round: official val was read once (D37, bundle 168b78f5b5d8) for the D36
+# candidate. Every choice in this round uses training CV only. The round ends with ONE replacement
+# val bundle (attempt 2), whatever it shows; attempt 1 stays in reports/val/attempts/.
+#
+# Evidence from training data only:
+# * Architecture size was never tuned: every transformer so far is 2 layers x width 128. A1 is the
+#   larger control from model plan section 9.1 (4 x 192), with the C1 recipe otherwise unchanged.
+# * In CV the C1 ensemble and LightGBM counts are within noise on AUROC, and the per-target oracle
+#   (better of the two per target) reaches 0.774. Output stacking (S) tests whether a learned
+#   combination captures part of that; it is not a transformer and would change the submission.
+# * Brier is reported but no calibration step exists. Calibration (C) fits per-target Platt
+#   scaling on out-of-fold predictions with nested folds.
+#
+# Rules, fixed now:
+# A1 screen (fold 0, against C1 fold 0): AUROC gain at least +0.005 and mAP loss at most 0.005.
+#   If it passes, folds 1 to 4 are appended and the section 5.3 rule applies against the C1 seed
+#   mean. If it fails, the architecture stays 2 x 128 and the screen is reported.
+# S (reports/stacking/clean): bases are the C1 three-seed out-of-fold ensemble (T), LightGBM clean
+#   counts (L1), and counts + values (L2); stackers logit_mean, prob_mean, logistic (nested folds).
+#   The stack replaces T as the submission only if, pooled out of fold with paired patient BCa 95%,
+#   S minus T has an AUROC interval entirely above 0 and an mAP point gain of at least 0, and S's
+#   pooled AUROC is at least L1's. Among stackers, the parameter-free logit_mean is preferred unless
+#   logistic exceeds it by at least 0.003 mean fold AUROC. Otherwise T stays the submission.
+# A2 (LightGBM probabilities as transformer head inputs, the AMEX-competition recipe): runs only if
+#   logistic exceeds logit_mean by at least 0.003 mean fold AUROC; that is the only evidence that
+#   jointly learned, target-specific weighting adds anything over a fixed blend. Otherwise skipped.
+# C: per-target Platt scaling of the submitted model's probabilities, fitted on training
+#   out-of-fold predictions with nested folds. Adopted if mean fold macro Brier improves on at least
+#   4 of 5 folds (per-target AUROC is unchanged by construction). Reliability curves are reported
+#   either way. A logistic stack already contains this scaling, so C applies only to T or logit_mean.
+# Stopping rule: no run beyond this file. After the rules resolve, freeze, run the replacement val
+# bundle once, write predictions.csv, and finish the report.
+
+incumbent = "configs/experiments/v2_c1.toml"
+method = "F"
+compute_ceiling_hours = 6
+combination_slots = 0
+
+[[experiment]]
+id = "A1-l4w192-screen"
+config = "configs/experiments/v3_l4w192.toml"
+reference = "configs/experiments/v2_c1.toml"
+folds = [0]
