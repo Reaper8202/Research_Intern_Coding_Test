@@ -12,8 +12,7 @@ Start with the report. The decision log is the evidence behind it.
 | `audit_criteria.md` | the 74 audit criteria written before the final audit; the verdicts are in `../reports/audit/final_audit.md` |
 | `submission_checklist.md` | what remained before submission, with the status of each item |
 | `figures/` | the report figures and the script that draws them from the committed reports |
-| `planning/` | the plans as written before the code: `plan.md` (steps and risks), `model_plan.md` (the transformer design and evaluation protocol, revisions 1 to 2.5), and a session handoff note from 31 October |
-| `background/` | two reviews from before modelling: which of the 40 targets have published clinical risk scores, and whether a clinical reference baseline was feasible (it was not used) |
+| `planning/` | the plans as written before the code: `plan.md` (steps and risks), `model_plan.md` (the transformer design and evaluation protocol, revisions 1 to 2.5) |
 
 Suggested order for a reviewer: `report.pdf`, then `decisions.md`, then `model_results.md`.
 The planning documents are kept as they were written. Where they and the decision log differ,

@@ -10,7 +10,7 @@
 | Primary deliverable | A transformer that estimates 40 five-year first-diagnosis probabilities. All weights originate in this project. |
 | Scope | Representation, training, model selection, and final validation. Step 5 covers test prediction and publishing. |
 | Assessment authority | `../../research_intern_coding_test/ReadMe.md` |
-| Related documents | `plan.md`, `decisions.md`, `baseline_results.md`, `clinical_reference_feasibility.md`, `endpoint_risk_scores.md` |
+| Related documents | `plan.md`, `decisions.md`, `baseline_results.md` (two clinical-score reviews consulted at the time are not kept in the repository) |
 
 ## 0. Purpose and terms
 
